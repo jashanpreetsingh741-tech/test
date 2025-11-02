@@ -3,456 +3,414 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tic Tac Toe with AI</title>
+    <title>AI Slide Deck Generator</title>
+    <!-- Load Tailwind CSS for styling -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <!-- Load Inter font -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Load Lucide icons -->
+    <script src="https://unpkg.com/lucide-react@latest/dist/umd/lucide.min.js"></script>
     <style>
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #111827; /* Tailwind's gray-900 */
-            background-image:
-                linear-gradient(rgba(255, 255, 255, 0.04) 2px, transparent 2px),
-                linear-gradient(90deg, rgba(255, 255, 255, 0.04) 2px, transparent 2px);
-            background-size: 100px 100px;
-            animation: pan 90s linear infinite;
         }
-
-        @keyframes pan {
-            0% { background-position: 0px 0px; }
-            100% { background-position: 900px 900px; }
+        /* Custom styles for the slide viewer */
+        #slide-viewer {
+            /* Creates the slide aspect ratio and centers content */
+            aspect-ratio: 16 / 9;
         }
-
-        #playButton {
-            transition: transform 0.2s ease-out, box-shadow 0.2s ease-out;
-            transform-style: preserve-3d;
-            box-shadow: 0 8px 15px rgba(0,0,0,0.2);
+        /* Simple loading spinner */
+        .spinner {
+            border-top-color: transparent;
+            border-style: solid;
+            border-width: 4px;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
         }
-        #playButton:hover {
-            transform: perspective(1000px) rotateX(15deg) rotateY(-15deg) scale3d(1.1, 1.1, 1.1);
-            box-shadow: 0 25px 40px rgba(0,0,0,0.4), 0 0 10px rgba(129, 140, 248, 0.6); /* Indigo shadow */
-        }
-
-        .cell {
-            width: 100px;
-            height: 100px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 3rem;
-            font-weight: bold;
-            cursor: pointer;
-            transition: background-color 0.2s ease-in-out;
-        }
-        @media (max-width: 640px) {
-            .cell {
-                width: 80px;
-                height: 80px;
-                font-size: 2.5rem;
-            }
-            #board-container {
-                width: 252px;
-                height: 252px;
-            }
-        }
-        .text-x { color: #34D399; } /* Emerald-400 */
-        .text-o { color: #F87171; } /* Red-400 */
-
-        .cell:not(:nth-child(3n)) {
-            border-right-width: 4px;
-        }
-        .cell:not(:nth-last-child(-n+3)) {
-            border-bottom-width: 4px;
-        }
-        #line-canvas {
-            position: absolute;
-            top: 0;
-            left: 0;
-            pointer-events: none;
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
         }
     </style>
 </head>
-<body class="bg-gray-900 text-white flex items-center justify-center min-h-screen">
+<body class="bg-gray-100 flex h-screen overflow-hidden">
 
-    <!-- Start Screen -->
-    <div id="start-screen" class="text-center flex flex-col items-center">
-        <h1 class="text-7xl font-extrabold mb-8 text-white">Tic Tac Toe</h1>
-        <button id="playButton" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-4 px-10 rounded-lg text-2xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-opacity-50 mb-6">
-            Play
-        </button>
-        <!-- Surprise Button -->
-        <button id="surpriseButton" class="bg-gray-700 hover:bg-gray-600 text-white font-semibold py-2 px-6 rounded-full text-lg transition-transform transform hover:scale-110 shadow-md">
-            🎁 Surprise!
-        </button>
-    </div>
-    
-    <!-- Surprise Message Screen (initially hidden) -->
-    <div id="surprise-screen" class="hidden text-center">
-        <h1 class="text-8xl font-extrabold text-pink-400 animate-pulse">LOVE U MAAUSI</h1>
-        <button id="backButton" class="mt-12 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 px-8 rounded-lg text-xl transition-transform transform hover:scale-105 shadow-lg">
-            Back
-        </button>
-    </div>
-
-    <!-- Mode Selection Screen (initially hidden) -->
-    <div id="mode-selection-screen" class="hidden text-center">
-        <h1 class="text-5xl font-extrabold mb-8 text-white">Choose Game Mode</h1>
-        <div class="flex flex-col items-center gap-6">
-            <button id="pvpButton" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 px-8 rounded-lg text-xl w-64 transition-transform transform hover:scale-105 shadow-lg">Player vs Player</button>
-            <button id="pvaButton" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 px-8 rounded-lg text-xl w-64 transition-transform transform hover:scale-105 shadow-lg">Player vs AI ✨</button>
+    <!-- === Sidebar (Controls) === -->
+    <div class="w-full max-w-sm lg:w-1/3 bg-white shadow-lg p-6 overflow-y-auto flex flex-col">
+        <div class="flex-shrink-0">
+            <h1 class="text-2xl font-bold text-blue-600">AI Slide Deck Generator</h1>
+            <p class="text-gray-600 mt-2">Enter a topic, and the AI will generate a complete slide deck for you.</p>
         </div>
-    </div>
 
-    <!-- AI Difficulty Selection Screen (initially hidden) -->
-    <div id="difficulty-selection-screen" class="hidden text-center">
-        <h1 class="text-5xl font-extrabold mb-8 text-white">Choose AI Difficulty</h1>
-        <div class="flex flex-col items-center gap-6">
-            <button id="easyButton" data-difficulty="easy" class="bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-8 rounded-lg text-xl w-64 transition-transform transform hover:scale-105 shadow-lg">Easy</button>
-            <button id="mediumButton" data-difficulty="medium" class="bg-yellow-500 hover:bg-yellow-600 text-white font-semibold py-3 px-8 rounded-lg text-xl w-64 transition-transform transform hover:scale-105 shadow-lg">Medium</button>
-            <button id="hardButton" data-difficulty="hard" class="bg-red-600 hover:bg-red-700 text-white font-semibold py-3 px-8 rounded-lg text-xl w-64 transition-transform transform hover:scale-105 shadow-lg">Hard (Unbeatable)</button>
-        </div>
-    </div>
-
-
-    <!-- Game Screen (initially hidden) -->
-    <main id="game-screen" class="hidden relative flex flex-col items-center bg-gray-800 p-8 rounded-2xl shadow-2xl">
-        <h1 class="text-4xl sm:text-5xl font-bold mb-2">Tic Tac Toe</h1>
-        <p id="status" class="text-lg text-gray-400 mb-2 h-8 transition-all duration-300">Player X's turn</p>
-        <p id="ai-status" class="text-sm text-yellow-400 mb-2 h-5"></p>
-        <div id="board-container" class="relative w-[312px] h-[312px] mt-4">
-             <div id="board" class="grid grid-cols-3 mx-auto rounded-lg overflow-hidden border-4 border-gray-700 h-full w-full">
-                <!-- Cells will be generated by JavaScript -->
+        <!-- Form for inputs -->
+        <form id="prompt-form" class="flex-grow flex flex-col mt-8 space-y-4">
+            <div>
+                <label for="topic" class="block text-sm font-medium text-gray-700">Topic or Prompt</label>
+                <textarea id="topic" rows="4" class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-base p-3" placeholder="e.g., 'The Future of Renewable Energy' or 'A 10-slide summary of the Roman Republic'"></textarea>
             </div>
-            <canvas id="line-canvas"></canvas>
-        </div>
-        <div id="end-game-overlay" class="hidden absolute inset-0 bg-gray-900 bg-opacity-60 backdrop-blur-md flex flex-col items-center justify-center rounded-2xl z-10">
-            <h2 id="end-game-message" class="text-6xl font-extrabold text-white animate-pulse">YOU WIN!</h2>
-            <div class="mt-8 flex flex-col gap-4 w-64">
-                <button id="restartButton" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 px-6 rounded-lg transition-transform transform hover:scale-105 shadow-lg">
-                    Restart Game
-                </button>
-                <button id="mainMenuButton" class="bg-gray-600 hover:bg-gray-700 text-white font-semibold py-3 px-6 rounded-lg transition-transform transform hover:scale-105 shadow-lg">
-                    Main Menu
+
+            <!-- NEW: File Upload Section -->
+            <div>
+                <label for="doc-upload" class="block text-sm font-medium text-gray-700">Upload Context (Optional)</label>
+                <input type="file" id="doc-upload" accept=".txt,.md" class="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer">
+                <p class="mt-1 text-xs text-gray-500">Upload a .txt or .md file to add its content to the topic box.</p>
+            </div>
+            
+            <div>
+                <label for="slide-count" class="block text-sm font-medium text-gray-700">Number of Slides</label>
+                <input type="number" id="slide-count" value="10" min="3" max="25" class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-base p-3">
+            </div>
+
+            <!-- Generate Button -->
+            <div class="pt-4">
+                <!-- FIX: Changed type_button="submit" to type="submit" -->
+                <button type="submit" id="generate-btn" class="w-full flex justify-center items-center bg-blue-600 text-white p-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors duration-200 disabled:bg-gray-400 disabled:cursor-not-allowed">
+                    <span id="btn-text">Generate Presentation</span>
+                    <div id="loading-spinner" class="spinner w-5 h-5 border-white hidden ml-2"></div>
                 </button>
             </div>
+            
+            <!-- Error Message Area -->
+            <div id="error-message" class="text-red-600 text-sm font-medium hidden p-3 bg-red-50 rounded-lg"></div>
+        </form>
+    </div>
+
+    <!-- === Main Content (Slide Viewer) === -->
+    <div class="w-full lg:w-2/3 p-6 sm:p-10 flex flex-col items-center justify-center">
+        <!-- Slide Display Area -->
+        <div id="slide-viewer" class="w-full max-w-5xl bg-white shadow-2xl rounded-2xl p-8 sm:p-12 lg:p-16 flex flex-col justify-center items-center text-center relative transition-all duration-300">
+            <!-- This content will be dynamically replaced -->
+            <div id="empty-state" class="flex flex-col items-center text-gray-500">
+                <i data-lucide="presentation" class="w-20 h-20 mb-4"></i>
+                <h2 class="text-2xl font-semibold">Your presentation will appear here</h2>
+                <p class="text-lg mt-2">Enter a topic on the left and click "Generate".</e>
+            </div>
+            <!-- This is the template for a generated slide -->
+            <div id="slide-content" class="hidden w-full h-full flex flex-col justify-center">
+                <h2 id="slide-title" class="text-2xl sm:text-3xl lg:text-5xl font-bold text-gray-800 break-words"></h2>
+                <ul id="slide-bullets" class="list-disc list-inside text-left text-lg sm:text-xl lg:text-3xl text-gray-700 space-y-3 sm:space-y-4 lg:space-y-6 mt-6 sm:mt-10 mx-auto max-w-prose">
+                    <!-- Bullet points will be injected here -->
+                </ul>
+            </div>
         </div>
-    </main>
+
+        <!-- Navigation Controls -->
+        <div id="slide-nav" class="mt-6 flex justify-between items-center w-full max-w-5xl hidden">
+            <button id="prev-btn" class="nav-btn bg-white p-3 rounded-full shadow-md hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                <i data-lucide="arrow-left" class="w-6 h-6 text-gray-700"></i>
+            </button>
+            <span id="slide-counter" class="text-lg font-medium text-gray-600"></span>
+            <button id="next-btn" class="nav-btn bg-white p-3 rounded-full shadow-md hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                <i data-lucide="arrow-right" class="w-6 h-6 text-gray-700"></i>
+            </button>
+        </div>
+    </div>
 
     <script>
-        const startScreen = document.getElementById('start-screen');
-        const modeSelectionScreen = document.getElementById('mode-selection-screen');
-        const difficultySelectionScreen = document.getElementById('difficulty-selection-screen');
-        const gameScreen = document.getElementById('game-screen');
-        const surpriseScreen = document.getElementById('surprise-screen');
-        const playButton = document.getElementById('playButton');
-        const surpriseButton = document.getElementById('surpriseButton');
-        const backButton = document.getElementById('backButton');
-        const boardElement = document.getElementById('board');
-        const statusElement = document.getElementById('status');
-        const lineCanvas = document.getElementById('line-canvas');
-        const endGameOverlay = document.getElementById('end-game-overlay');
-        const endGameMessage = document.getElementById('end-game-message');
-        const restartButton = document.getElementById('restartButton');
-        const mainMenuButton = document.getElementById('mainMenuButton');
-        const pvpButton = document.getElementById('pvpButton');
-        const pvaButton = document.getElementById('pvaButton');
-        const easyButton = document.getElementById('easyButton');
-        const mediumButton = document.getElementById('mediumButton');
-        const hardButton = document.getElementById('hardButton');
-        const aiStatusElement = document.getElementById('ai-status');
-        const canvasCtx = lineCanvas.getContext('2d');
+        // --- State Management ---
+        const state = {
+            slides: [],
+            currentSlide: 0,
+            isLoading: false,
+            errorMessage: '',
+        };
 
-        let currentPlayer = 'X';
-        let boardState = ['', '', '', '', '', '', '', '', ''];
-        let gameActive = true;
-        let gameMode = 'pvp';
-        let aiDifficulty = 'hard';
-        const aiPlayer = 'O';
-        const humanPlayer = 'X';
-
-        const winningConditions = [
-            [0, 1, 2], [3, 4, 5], [6, 7, 8],
-            [0, 3, 6], [1, 4, 7], [2, 5, 8],
-            [0, 4, 8], [2, 4, 6]
-        ];
+        // --- DOM Elements ---
+        const promptForm = document.getElementById('prompt-form');
+        const topicInput = document.getElementById('topic');
+        const slideCountInput = document.getElementById('slide-count');
+        const docUpload = document.getElementById('doc-upload'); // NEW
+        const generateBtn = document.getElementById('generate-btn');
+        const btnText = document.getElementById('btn-text');
+        const loadingSpinner = document.getElementById('loading-spinner');
+        const errorMessageEl = document.getElementById('error-message');
         
-        // --- Screen Navigation ---
-        playButton.addEventListener('click', () => {
-            startScreen.classList.add('hidden');
-            modeSelectionScreen.classList.remove('hidden');
-        });
+        const slideViewer = document.getElementById('slide-viewer');
+        const emptyState = document.getElementById('empty-state');
+        const slideContent = document.getElementById('slide-content');
+        const slideTitle = document.getElementById('slide-title');
+        const slideBullets = document.getElementById('slide-bullets');
         
-        // Surprise Button Logic
-        surpriseButton.addEventListener('click', () => {
-            startScreen.classList.add('hidden');
-            surpriseScreen.classList.remove('hidden');
-            triggerCelebration();
-        });
-        
-        backButton.addEventListener('click', () => {
-            surpriseScreen.classList.add('hidden');
-            startScreen.classList.remove('hidden');
-        });
+        const slideNav = document.getElementById('slide-nav');
+        const prevBtn = document.getElementById('prev-btn');
+        const nextBtn = document.getElementById('next-btn');
+        const slideCounter = document.getElementById('slide-counter');
 
-        function startGame() {
-            gameScreen.classList.remove('hidden');
-            restartGame();
-        }
+        // --- Gemini API Configuration ---
+        const apiKey = ""; // API key is handled by the environment
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
 
-        function goToMainMenu() {
-            gameScreen.classList.add('hidden');
-            endGameOverlay.classList.add('hidden');
-            modeSelectionScreen.classList.add('hidden');
-            difficultySelectionScreen.classList.add('hidden');
-            startScreen.classList.remove('hidden');
-        }
-
-        function setCanvasSize() {
-            const boardRect = boardElement.getBoundingClientRect();
-            lineCanvas.width = boardRect.width;
-            lineCanvas.height = boardRect.height;
-        }
-
-        function createBoard() {
-            boardElement.innerHTML = '';
-            for (let i = 0; i < 9; i++) {
-                const cell = document.createElement('div');
-                cell.classList.add('cell', 'border-gray-700', 'hover:bg-gray-700');
-                cell.dataset.index = i;
-                cell.addEventListener('click', handleCellClick);
-                boardElement.appendChild(cell);
+        // Define the expected JSON structure for the AI response
+        const responseSchema = {
+            type: "ARRAY",
+            items: {
+                type: "OBJECT",
+                properties: {
+                    title: { type: "STRING" },
+                    bullets: {
+                        type: "ARRAY",
+                        items: { type: "STRING" }
+                    }
+                },
+                required: ["title", "bullets"]
             }
-            setTimeout(setCanvasSize, 0);
-        }
+        };
 
-        // --- Game Logic ---
-        function handleCellClick(event) {
-            const clickedCell = event.target;
-            const clickedCellIndex = parseInt(clickedCell.dataset.index);
+        // --- Event Listeners ---
+        promptForm.addEventListener('submit', handleGenerateClick);
+        prevBtn.addEventListener('click', showPreviousSlide);
+nextBtn.addEventListener('click', showNextSlide);
+        docUpload.addEventListener('change', handleFileUpload); // NEW
 
-            if (boardState[clickedCellIndex] !== '' || !gameActive) return;
-            if (gameMode === 'pva' && currentPlayer === aiPlayer) return;
-
-            updateBoard(clickedCell, clickedCellIndex);
-            checkResult();
-        }
-
-        function updateBoard(cell, index) {
-            boardState[index] = currentPlayer;
-            cell.textContent = currentPlayer;
-            cell.classList.add(currentPlayer === 'X' ? 'text-x' : 'text-o');
-        }
-
-        function checkResult() {
-            let roundWon = false;
-            let winConditionMet = null;
-
-            for (let i = 0; i < winningConditions.length; i++) {
-                const winCondition = winningConditions[i];
-                let a = boardState[winCondition[0]];
-                let b = boardState[winCondition[1]];
-                let c = boardState[winCondition[2]];
-
-                if (a === '' || b === '' || c === '') continue;
-                if (a === b && b === c) {
-                    roundWon = true;
-                    winConditionMet = winCondition;
-                    break;
-                }
-            }
-
-            if (roundWon) {
-                statusElement.textContent = `Player ${currentPlayer} has won!`;
-                gameActive = false;
-                drawWinningLine(winConditionMet);
-                triggerCelebration();
-                showEndScreen(false);
+        // --- NEW: File Upload Handler ---
+        /**
+         * Reads a text file and adds its content to the topic textarea.
+         */
+        function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (!file) {
                 return;
             }
 
-            if (!boardState.includes('')) {
-                statusElement.textContent = 'Game ended in a draw!';
-                gameActive = false;
-                showEndScreen(true);
+            // Check for valid file types
+            if (!file.type.startsWith('text/') && !file.name.endsWith('.md')) {
+                setErrorMessage('Please upload a plain text file (.txt, .md).');
+                event.target.value = null; // Clear the input
                 return;
             }
 
-            switchPlayer();
-
-            if (gameMode === 'pva' && currentPlayer === aiPlayer && gameActive) {
-                aiStatusElement.textContent = '✨ AI is thinking...';
-                setTimeout(() => {
-                    const aiMove = getAIMove();
-                    const cellToUpdate = boardElement.querySelector(`[data-index='${aiMove}']`);
-                    updateBoard(cellToUpdate, aiMove);
-                    aiStatusElement.textContent = '';
-                    checkResult();
-                }, 300);
-            }
-        }
-        
-        function getAIMove() {
-            switch(aiDifficulty) {
-                case 'easy': return getEasyAIMove(boardState);
-                case 'medium': return getMediumAIMove(boardState);
-                case 'hard':
-                default: return findBestMove(boardState);
-            }
-        }
-
-        function getEasyAIMove(board) {
-            let availableSpots = [];
-            board.forEach((val, index) => { if (val === '') availableSpots.push(index); });
-            return availableSpots[Math.floor(Math.random() * availableSpots.length)];
-        }
-
-        function getMediumAIMove(board) {
-            for (let i = 0; i < 9; i++) {
-                if (board[i] === '') { let tempBoard = [...board]; tempBoard[i] = aiPlayer; if (evaluate(tempBoard) === 10) return i; }
-            }
-            for (let i = 0; i < 9; i++) {
-                if (board[i] === '') { let tempBoard = [...board]; tempBoard[i] = humanPlayer; if (evaluate(tempBoard) === -10) return i; }
-            }
-            if (board[4] === '') return 4;
-            const corners = [0, 2, 6, 8].filter(i => board[i] === '');
-            if (corners.length > 0) return corners[Math.floor(Math.random() * corners.length)];
-            return getEasyAIMove(board);
-        }
-
-        function findBestMove(board) {
-            let bestVal = -Infinity;
-            let bestMove = -1;
-            for (let i = 0; i < 9; i++) {
-                if (board[i] === '') {
-                    board[i] = aiPlayer;
-                    let moveVal = minimax(board, 0, false);
-                    board[i] = '';
-                    if (moveVal > bestVal) { bestMove = i; bestVal = moveVal; }
-                }
-            }
-            return bestMove;
-        }
-
-        function minimax(board, depth, isMax) {
-            let score = evaluate(board);
-            if (score === 10) return score - depth;
-            if (score === -10) return score + depth;
-            if (!board.includes('')) return 0;
-
-            if (isMax) {
-                let best = -Infinity;
-                for (let i = 0; i < 9; i++) {
-                    if (board[i] === '') {
-                        board[i] = aiPlayer;
-                        best = Math.max(best, minimax(board, depth + 1, !isMax));
-                        board[i] = '';
-                    }
-                }
-                return best;
-            } else {
-                let best = Infinity;
-                for (let i = 0; i < 9; i++) {
-                    if (board[i] === '') {
-                        board[i] = humanPlayer;
-                        best = Math.min(best, minimax(board, depth + 1, !isMax));
-                        board[i] = '';
-                    }
-                }
-                return best;
-            }
-        }
-
-        function evaluate(board) {
-            for (let i = 0; i < winningConditions.length; i++) {
-                const [a, b, c] = winningConditions[i];
-                if (board[a] && board[a] === board[b] && board[a] === board[c]) {
-                    if (board[a] === aiPlayer) return 10;
-                    else if (board[a] === humanPlayer) return -10;
-                }
-            }
-            return 0;
-        }
-
-        function switchPlayer() {
-            currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
-            statusElement.textContent = `Player ${currentPlayer}'s turn`;
-        }
-
-        function restartGame() {
-            gameActive = true;
-            currentPlayer = 'X';
-            boardState = ['', '', '', '', '', '', '', '', ''];
-            statusElement.textContent = `Player ${currentPlayer}'s turn`;
-            endGameOverlay.classList.add('hidden');
-            aiStatusElement.textContent = '';
-            boardElement.style.pointerEvents = 'auto';
-            canvasCtx.clearRect(0, 0, lineCanvas.width, lineCanvas.height);
-            document.querySelectorAll('.cell').forEach(cell => {
-                cell.textContent = '';
-                cell.classList.remove('text-x', 'text-o');
-            });
-        }
-        
-        function drawWinningLine(winCondition) {
-            const cells = boardElement.children;
-            const startCell = cells[winCondition[0]];
-            const endCell = cells[winCondition[2]];
+            const reader = new FileReader();
             
-            const startX = startCell.offsetLeft + startCell.offsetWidth / 2;
-            const startY = startCell.offsetTop + startCell.offsetHeight / 2;
-            const endX = endCell.offsetLeft + endCell.offsetWidth / 2;
-            const endY = endCell.offsetTop + endCell.offsetHeight / 2;
-
-            canvasCtx.beginPath();
-            canvasCtx.moveTo(startX, startY);
-            canvasCtx.lineTo(endX, endY);
-            canvasCtx.strokeStyle = '#FFFFFF';
-            canvasCtx.lineWidth = 8;
-            canvasCtx.lineCap = 'round';
-            canvasCtx.stroke();
+            reader.onload = (e) => {
+                const text = e.target.result;
+                // Append text to the topic box, or set it if empty
+                topicInput.value = topicInput.value 
+                    ? topicInput.value + '\n\n--- Uploaded Content ---\n' + text 
+                    : text;
+                setErrorMessage(''); // Clear any previous errors
+            };
+            
+            reader.onerror = () => {
+                setErrorMessage('Failed to read the file.');
+            };
+            
+            reader.readAsText(file);
+            
+            // Clear the input value to allow re-uploading the same file
+            event.target.value = null;
         }
 
-        function showEndScreen(isDraw) {
-            if (isDraw) {
-                endGameMessage.textContent = 'DRAW!';
-                endGameMessage.classList.remove('text-x', 'text-o');
-            } else {
-                endGameMessage.textContent = `${currentPlayer} WINS!`;
-                endGameMessage.classList.add(currentPlayer === 'X' ? 'text-x' : 'text-o');
+        // --- Core Functions ---
+
+        /**
+         * Handles the form submission to generate slides.
+         */
+        async function handleGenerateClick(e) {
+            e.preventDefault();
+            if (state.isLoading) return;
+
+            const topic = topicInput.value;
+            const slideCount = slideCountInput.value;
+
+            if (!topic) {
+                setErrorMessage('Please enter a topic.');
+                return;
             }
-            endGameOverlay.classList.remove('hidden');
+
+            setLoading(true);
+            setErrorMessage('');
+
+            // Construct the prompt for the AI
+            const systemPrompt = `You are a world-class presentation generation assistant.
+Your task is to create a complete, informative, and engaging slide deck based on the user's topic.
+The presentation must have exactly ${slideCount} slides.
+For each slide, provide a concise title and a list of key bullet points.
+If the user provides uploaded text, use it as the primary source material for the presentation.
+Return the result as a JSON array, adhering to the provided schema.`;
+            
+            const userQuery = `Topic & Context: "${topic}"\nNumber of Slides: ${slideCount}`;
+            
+            const payload = {
+                contents: [{ parts: [{ text: userQuery }] }],
+                systemInstruction: {
+                    parts: [{ text: systemPrompt }]
+                },
+                generationConfig: {
+                    responseMimeType: "application/json",
+                    responseSchema: responseSchema
+                }
+            };
+
+            try {
+                const result = await fetchWithBackoff(apiUrl, payload);
+                if (!result.candidates || !result.candidates[0].content.parts[0].text) {
+                    throw new Error('Invalid response from AI. Please try again.');
+                }
+
+                // Extract and parse the JSON response
+                const jsonResponse = result.candidates[0].content.parts[0].text;
+                state.slides = JSON.parse(jsonResponse);
+                state.currentSlide = 0;
+                
+                renderSlide();
+
+            } catch (error) {
+                console.error('Error generating slides:', error);
+                setErrorMessage(error.message || 'Failed to generate presentation. Please check your topic and try again.');
+                // Show empty state if slides were not generated
+                emptyState.classList.remove('hidden');
+                slideContent.classList.add('hidden');
+                slideNav.classList.add('hidden');
+            } finally {
+                setLoading(false);
+            }
         }
 
-        function triggerCelebration() {
-            confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 }, zIndex: 3000 });
+        /**
+         * Renders the current slide based on the state.
+         */
+        function renderSlide() {
+            if (state.slides.length === 0) {
+                emptyState.classList.remove('hidden');
+                slideContent.classList.add('hidden');
+                slideNav.classList.add('hidden');
+                return;
+            }
+
+            // Hide empty state, show slide content
+            emptyState.classList.add('hidden');
+            slideContent.classList.remove('hidden');
+            slideNav.classList.remove('hidden');
+
+            const slide = state.slides[state.currentSlide];
+
+            // Add a small fade transition
+            slideContent.classList.add('opacity-0');
+            
+            setTimeout(() => {
+                slideTitle.textContent = slide.title || 'Untitled Slide';
+                
+                // Clear old bullets
+                slideBullets.innerHTML = ''; 
+                
+                // Add new bullets
+                if (slide.bullets && slide.bullets.length > 0) {
+                    slide.bullets.forEach(bullet => {
+                        const li = document.createElement('li');
+                        li.textContent = bullet;
+                        slideBullets.appendChild(li);
+                    });
+                } else {
+                    const li = document.createElement('li');
+                    li.textContent = 'No content for this slide.';
+                    li.className = 'text-gray-400 italic';
+                    slideBullets.appendChild(li);
+                }
+                
+                slideContent.classList.remove('opacity-0');
+            }, 100); // Short delay for fade effect
+
+            updateNav();
         }
 
-        // --- Event Listeners & Initialization ---
-        restartButton.addEventListener('click', restartGame);
-        mainMenuButton.addEventListener('click', goToMainMenu);
-        window.addEventListener('resize', setCanvasSize);
-        
-        pvpButton.addEventListener('click', () => {
-            gameMode = 'pvp';
-            modeSelectionScreen.classList.add('hidden');
-            startGame();
-        });
+        /**
+         * Updates the navigation buttons and slide counter.
+         */
+        function updateNav() {
+            slideCounter.textContent = `Slide ${state.currentSlide + 1} / ${state.slides.length}`;
+            prevBtn.disabled = state.currentSlide === 0;
+            nextBtn.disabled = state.currentSlide === state.slides.length - 1;
+        }
 
-        pvaButton.addEventListener('click', () => {
-            modeSelectionScreen.classList.add('hidden');
-            difficultySelectionScreen.classList.remove('hidden');
-        });
+        function showPreviousSlide() {
+            if (state.currentSlide > 0) {
+                state.currentSlide--;
+                renderSlide();
+            }
+        }
 
-        [easyButton, mediumButton, hardButton].forEach(button => {
-            button.addEventListener('click', (e) => {
-                aiDifficulty = e.target.dataset.difficulty;
-                gameMode = 'pva';
-                difficultySelectionScreen.classList.add('hidden');
-                startGame();
-            });
-        });
+        function showNextSlide() {
+            if (state.currentSlide < state.slides.length - 1) {
+                state.currentSlide++;
+                renderSlide();
+            }
+        }
 
-        createBoard();
+        // --- UI Helper Functions ---
+
+        /**
+         * Sets the loading state for the UI.
+         * @param {boolean} isLoading
+         */
+        function setLoading(isLoading) {
+            state.isLoading = isLoading;
+            generateBtn.disabled = isLoading;
+            if (isLoading) {
+                btnText.textContent = 'Generating...';
+                loadingSpinner.classList.remove('hidden');
+            } else {
+                btnText.textContent = 'Generate Presentation';
+                loadingSpinner.classList.add('hidden');
+            }
+        }
+
+        /**
+         * Displays an error message to the user.
+         * @param {string} message
+         */
+        function setErrorMessage(message) {
+            state.errorMessage = message;
+            if (message) {
+                errorMessageEl.textContent = message;
+                errorMessageEl.classList.remove('hidden');
+            } else {
+                errorMessageEl.classList.add('hidden');
+            }
+        }
+
+        /**
+         * A robust fetch wrapper with exponential backoff.
+         */
+        async function fetchWithBackoff(url, payload, retries = 5, delay = 1000) {
+            for (let i = 0; i <= retries; i++) {
+                try {
+                    const response = await fetch(url, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (response.ok) {
+                        return await response.json();
+                    }
+                    
+                    if (response.status === 429 || response.status >= 500) {
+                        // Retryable error
+                        console.warn(`Attempt ${i + 1} failed with status ${response.status}. Retrying in ${delay}ms...`);
+                        await new Promise(resolve => setTimeout(resolve, delay));
+                        delay *= 2; // Exponential backoff
+                    } else {
+                        // Non-retryable error
+                        const errorBody = await response.json();
+                        throw new Error(errorBody.error?.message || `HTTP error! Status: ${response.status}`);
+                    }
+                } catch (error) {
+                    if (i === retries) {
+                        throw new Error(`Failed to fetch after ${retries} attempts: ${error.message}`);
+                    }
+                    if (error.name !== 'AbortError' && error.name !== 'TypeError') { // Don't retry client-side errors
+                        await new Promise(resolve => setTimeout(resolve, delay));
+                        delay *= 2;
+                    } else {
+                        throw error; // Re-throw client-side errors immediately
+                    }
+                }
+            }
+            throw new Error('Failed to get a response from the AI after all retries.');
+        }
+
+        // --- Initialization ---
+        lucide.createIcons(); // Render all lucide icons
     </script>
 </body>
 </html>
