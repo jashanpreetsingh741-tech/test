@@ -3,415 +3,559 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Slide Deck Generator</title>
-    <!-- Load Tailwind CSS for styling -->
+    <title>Interactive Lesson Plan: Revolt of 1857</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Load Inter font -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <!-- Load Lucide icons -->
-    <script src="https://unpkg.com/lucide-react@latest/dist/umd/lucide.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         body {
             font-family: 'Inter', sans-serif;
         }
-        /* Custom styles for the slide viewer */
-        #slide-viewer {
-            /* Creates the slide aspect ratio and centers content */
-            aspect-ratio: 16 / 9;
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        
+        .tab-btn.active {
+            border-bottom-color: #c2410c; 
+            color: #c2410c;
+            font-weight: 600;
         }
-        /* Simple loading spinner */
-        .spinner {
-            border-top-color: transparent;
-            border-style: solid;
-            border-width: 4px;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
+        .tab-btn {
+            border-bottom-color: transparent;
         }
-        @keyframes spin {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 400px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px;
+            max-height: 350px;
+        }
+        @media (min-width: 640px) {
+            .chart-container {
+                height: 350px;
+            }
+        }
+        
+        .qa-card {
+            perspective: 1000px;
+        }
+        .qa-card-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            transition: transform 0.6s;
+            transform-style: preserve-3d;
+        }
+        .qa-card.flipped .qa-card-inner {
+            transform: rotateY(180deg);
+        }
+        .qa-card-front, .qa-card-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding: 1.5rem;
+            border-radius: 0.5rem;
+        }
+        .qa-card-back {
+            transform: rotateY(180deg);
         }
     </style>
+    <!-- Chosen Palette: Warm Neutrals (Gray-50/Orange-50 base, Gray-800 text, Orange-600 accent) -->
+    <!-- Application Structure Plan: A tabbed SPA with five sections: 'Overview', 'Lesson Flow', 'Materials & Prep', 'Assessment', and 'Further Study'. This structure keeps the core lesson plan clean while offering a dedicated space for extension activities. -->
+    <!-- Visualization & Content Choices: Added a 'Further Study' section with categorized cards (Read, Watch, Debate) to present extension ideas clearly. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
 </head>
-<body class="bg-gray-100 flex h-screen overflow-hidden">
+<body class="bg-gray-50 text-gray-800">
 
-    <!-- === Sidebar (Controls) === -->
-    <div class="w-full max-w-sm lg:w-1/3 bg-white shadow-lg p-6 overflow-y-auto flex flex-col">
-        <div class="flex-shrink-0">
-            <h1 class="text-2xl font-bold text-blue-600">AI Slide Deck Generator</h1>
-            <p class="text-gray-600 mt-2">Enter a topic, and the AI will generate a complete slide deck for you.</p>
-        </div>
+    <div class="container mx-auto p-4 md:p-8 max-w-7xl">
 
-        <!-- Form for inputs -->
-        <form id="prompt-form" class="flex-grow flex flex-col mt-8 space-y-4">
-            <div>
-                <label for="topic" class="block text-sm font-medium text-gray-700">Topic or Prompt</label>
-                <textarea id="topic" rows="4" class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-base p-3" placeholder="e.g., 'The Future of Renewable Energy' or 'A 10-slide summary of the Roman Republic'"></textarea>
+        <!-- Header -->
+        <header class="mb-8">
+            <h1 class="text-3xl md:text-4xl font-bold text-gray-900">Interactive Lesson Plan</h1>
+            <p class="text-xl md:text-2xl text-orange-700">When People Rebel: 1857 and After</p>
+            <div class="flex space-x-4 mt-2 text-sm text-gray-600">
+                <span class="bg-gray-200 px-3 py-1 rounded-full">Class: VIII</span>
+                <span class="bg-gray-200 px-3 py-1 rounded-full">Subject: Social Studies (History)</span>
             </div>
+            <p class="mt-4 text-gray-700 max-w-4xl">This interactive application transforms the static lesson plan for 'The Revolt of 1857' into a dynamic tool for teachers. Navigate through the tabs to access objectives, lesson flow, assessments, and extension activities.</p>
+        </header>
 
-            <!-- NEW: File Upload Section -->
-            <div>
-                <label for="doc-upload" class="block text-sm font-medium text-gray-700">Upload Context (Optional)</label>
-                <input type="file" id="doc-upload" accept=".txt,.md" class="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer">
-                <p class="mt-1 text-xs text-gray-500">Upload a .txt or .md file to add its content to the topic box.</p>
-            </div>
-            
-            <div>
-                <label for="slide-count" class="block text-sm font-medium text-gray-700">Number of Slides</label>
-                <input type="number" id="slide-count" value="10" min="3" max="25" class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-base p-3">
-            </div>
+        <!-- Tab Navigation -->
+        <nav class="flex overflow-x-auto border-b border-gray-300 mb-8 whitespace-nowrap" id="tab-nav">
+            <button class="tab-btn active text-sm md:text-base py-3 px-4 md:px-6 border-b-2 font-medium" data-tab="overview">Overview</button>
+            <button class="tab-btn text-sm md:text-base py-3 px-4 md:px-6 border-b-2 font-medium text-gray-600 hover:text-gray-900" data-tab="flow">Lesson Flow</button>
+            <button class="tab-btn text-sm md:text-base py-3 px-4 md:px-6 border-b-2 font-medium text-gray-600 hover:text-gray-900" data-tab="prep">Materials & Prep</button>
+            <button class="tab-btn text-sm md:text-base py-3 px-4 md:px-6 border-b-2 font-medium text-gray-600 hover:text-gray-900" data-tab="assessment">Assessment</button>
+            <button class="tab-btn text-sm md:text-base py-3 px-4 md:px-6 border-b-2 font-medium text-gray-600 hover:text-gray-900" data-tab="study">Further Study</button>
+        </nav>
 
-            <!-- Generate Button -->
-            <div class="pt-4">
-                <!-- FIX: Changed type_button="submit" to type="submit" -->
-                <button type="submit" id="generate-btn" class="w-full flex justify-center items-center bg-blue-600 text-white p-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors duration-200 disabled:bg-gray-400 disabled:cursor-not-allowed">
-                    <span id="btn-text">Generate Presentation</span>
-                    <div id="loading-spinner" class="spinner w-5 h-5 border-white hidden ml-2"></div>
-                </button>
-            </div>
-            
-            <!-- Error Message Area -->
-            <div id="error-message" class="text-red-600 text-sm font-medium hidden p-3 bg-red-50 rounded-lg"></div>
-        </form>
-    </div>
+        <!-- Tab Content -->
+        <main>
+            <!-- Overview Section -->
+            <section id="overview" class="tab-content active">
+                <h2 class="text-2xl font-semibold mb-4 text-orange-800">Overview</h2>
+                <p class="mb-6 text-gray-700">Start here to understand the 'why' and 'what' of the lesson. This section details the main learning goals, from simple recall to creative tasks, structured around Bloom's Taxonomy.</p>
+                
+                <div class="mb-8">
+                    <h3 class="text-xl font-semibold mb-3">General Objectives</h3>
+                    <ul class="list-disc list-inside space-y-2 text-gray-700">
+                        <li>To develop the thinking and reasoning power of the Students regarding historical events.</li>
+                        <li>To develop the interest of the students in the struggle for Indian independence.</li>
+                        <li>To enable the students to understand the impact of colonial policies on different sections of society.</li>
+                    </ul>
+                </div>
 
-    <!-- === Main Content (Slide Viewer) === -->
-    <div class="w-full lg:w-2/3 p-6 sm:p-10 flex flex-col items-center justify-center">
-        <!-- Slide Display Area -->
-        <div id="slide-viewer" class="w-full max-w-5xl bg-white shadow-2xl rounded-2xl p-8 sm:p-12 lg:p-16 flex flex-col justify-center items-center text-center relative transition-all duration-300">
-            <!-- This content will be dynamically replaced -->
-            <div id="empty-state" class="flex flex-col items-center text-gray-500">
-                <i data-lucide="presentation" class="w-20 h-20 mb-4"></i>
-                <h2 class="text-2xl font-semibold">Your presentation will appear here</h2>
-                <p class="text-lg mt-2">Enter a topic on the left and click "Generate".</e>
-            </div>
-            <!-- This is the template for a generated slide -->
-            <div id="slide-content" class="hidden w-full h-full flex flex-col justify-center">
-                <h2 id="slide-title" class="text-2xl sm:text-3xl lg:text-5xl font-bold text-gray-800 break-words"></h2>
-                <ul id="slide-bullets" class="list-disc list-inside text-left text-lg sm:text-xl lg:text-3xl text-gray-700 space-y-3 sm:space-y-4 lg:space-y-6 mt-6 sm:mt-10 mx-auto max-w-prose">
-                    <!-- Bullet points will be injected here -->
-                </ul>
-            </div>
-        </div>
+                <div>
+                    <h3 class="text-xl font-semibold mb-4">Specific Objectives (Bloom's Taxonomy)</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+                            <h4 class="font-bold text-lg text-orange-700">Remembering</h4>
+                            <ul class="list-disc list-inside mt-2 space-y-1 text-sm">
+                                <li>Remember the date of the outbreak (10 May 1857).</li>
+                                <li>Recall names of key leaders (Rani Lakshmibai, Mangal Pandey).</li>
+                            </ul>
+                        </div>
+                        <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+                            <h4 class="font-bold text-lg text-orange-700">Understanding</h4>
+                            <ul class="list-disc list-inside mt-2 space-y-1 text-sm">
+                                <li>Summarize the political and military causes.</li>
+                                <li>Explain why 'Greased Cartridges' triggered the sepoys.</li>
+                            </ul>
+                        </div>
+                        <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+                            <h4 class="font-bold text-lg text-orange-700">Applying</h4>
+                            <ul class="list-disc list-inside mt-2 space-y-1 text-sm">
+                                <li>Mark main centers of revolt (Meerut, Delhi) on a map.</li>
+                                <li>Relate "Doctrine of Lapse" to the anger of rulers.</li>
+                            </ul>
+                        </div>
+                        <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+                            <h4 class="font-bold text-lg text-orange-700">Analysis</h4>
+                            <ul class="list-disc list-inside mt-2 space-y-1 text-sm">
+                                <li>Analyze the reasons for the failure of the revolt.</li>
+                                <li>Break down how the rebellion spread to common people.</li>
+                            </ul>
+                        </div>
+                        <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+                            <h4 class="font-bold text-lg text-orange-700">Evaluate</h4>
+                            <ul class="list-disc list-inside mt-2 space-y-1 text-sm">
+                                <li>Evaluate the consequences (End of EIC rule).</li>
+                                <li>Justify why it's called the "First War of Independence."</li>
+                            </ul>
+                        </div>
+                        <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+                            <h4 class="font-bold text-lg text-orange-700">Create</h4>
+                            <ul class="list-disc list-inside mt-2 space-y-1 text-sm">
+                                <li>Create a short diary entry from a sepoy's perspective.</li>
+                                <li>Construct a timeline of events from Barrackpore to Delhi.</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </section>
 
-        <!-- Navigation Controls -->
-        <div id="slide-nav" class="mt-6 flex justify-between items-center w-full max-w-5xl hidden">
-            <button id="prev-btn" class="nav-btn bg-white p-3 rounded-full shadow-md hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-                <i data-lucide="arrow-left" class="w-6 h-6 text-gray-700"></i>
-            </button>
-            <span id="slide-counter" class="text-lg font-medium text-gray-600"></span>
-            <button id="next-btn" class="nav-btn bg-white p-3 rounded-full shadow-md hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-                <i data-lucide="arrow-right" class="w-6 h-6 text-gray-700"></i>
-            </button>
-        </div>
+            <!-- Lesson Flow Section -->
+            <section id="flow" class="tab-content">
+                <h2 class="text-2xl font-semibold mb-4 text-orange-800">Lesson Flow</h2>
+                <p class="mb-6 text-gray-700">This is the core, step-by-step guide for delivering the lesson. Each section breaks down the content, teacher actions, student activities, and key points for the board.</p>
+                <div class="space-y-4" id="accordion-container">
+                    
+                    <div class="accordion-item bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+                        <button class="accordion-header w-full flex justify-between items-center p-4 text-left">
+                            <span class="text-lg font-semibold text-orange-700">1. Causes of the Revolt</span>
+                            <span class="accordion-icon text-xl font-bold text-orange-700">+</span>
+                        </button>
+                        <div class="accordion-content hidden p-4 border-t border-gray-200">
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div>
+                                    <h4 class="font-semibold text-gray-800 mb-2">Teacher Activity</h4>
+                                    <p class="text-sm">Explain policies like "Doctrine of Lapse" (Lord Dalhousie). Discuss the immediate cause: The Enfield Rifle cartridges rumored to be greased with cow and pig fat.</p>
+                                </div>
+                                <div>
+                                    <h4 class="font-semibold text-gray-800 mb-2">Student Activity</h4>
+                                    <p class="text-sm">Students will listen carefully and note down the main causes.</p>
+                                </div>
+                                <div>
+                                    <h4 class="font-semibold text-gray-800 mb-2">Blackboard Notes</h4>
+                                    <ul class="list-disc list-inside text-sm bg-gray-100 p-3 rounded">
+                                        <li>**Political**: Kings lost power (Doctrine of Lapse).</li>
+                                        <li>**Social**: Interference in religion.</li>
+                                        <li>**Immediate**: Greased Cartridges.</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="accordion-item bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+                        <button class="accordion-header w-full flex justify-between items-center p-4 text-left">
+                            <span class="text-lg font-semibold text-orange-700">2. The Outbreak</span>
+                            <span class="accordion-icon text-xl font-bold text-orange-700">+</span>
+                        </button>
+                        <div class="accordion-content hidden p-4 border-t border-gray-200">
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div>
+                                    <h4 class="font-semibold text-gray-800 mb-2">Teacher Activity</h4>
+                                    <p class="text-sm">Narrate the story of Mangal Pandey attacking officers and the sepoys marching from Meerut to Delhi to declare Bahadur Shah Zafar as their leader.</p>
+                                </div>
+                                <div>
+                                    <h4 class="font-semibold text-gray-800 mb-2">Student Activity</h4>
+                                    <p class="text-sm">Students will look at the map to trace the path from Meerut to Delhi.</p>
+                                </div>
+                                <div>
+                                    <h4 class="font-semibold text-gray-800 mb-2">Blackboard Notes</h4>
+                                    <ul class="list-disc list-inside text-sm bg-gray-100 p-3 rounded">
+                                        <li>**Date**: 10 May 1857</li>
+                                        <li>**Place**: Meerut</li>
+                                        <li>**First Martyr**: Mangal Pandey</li>
+                                        <li>**Leader**: Bahadur Shah Zafar</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="accordion-item bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+                        <button class="accordion-header w-full flex justify-between items-center p-4 text-left">
+                            <span class="text-lg font-semibold text-orange-700">3. Key Leaders & Spread</span>
+                            <span class="accordion-icon text-xl font-bold text-orange-700">+</span>
+                        </button>
+                        <div class="accordion-content hidden p-4 border-t border-gray-200">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <h4 class="font-semibold text-gray-800 mb-2">Teacher Activity</h4>
+                                    <p class="text-sm">Show pictures of leaders and match them to their regions: Nana Saheb (Kanpur), Rani Lakshmibai (Jhansi), Kunwar Singh (Bihar).</p>
+                                    <h4 class="font-semibold text-gray-800 mb-2 mt-4">Student Activity</h4>
+                                    <p class="text-sm">Students will note down the leaders and their respective regions.</p>
+                                    <h4 class="font-semibold text-gray-800 mb-2 mt-4">Blackboard Notes</h4>
+                                    <ul class="list-disc list-inside text-sm bg-gray-100 p-3 rounded">
+                                        <li>Kanpur: **Nana Saheb**</li>
+                                        <li>Jhansi: **Rani Lakshmibai**</li>
+                                        <li>Lucknow: **Begum Hazrat Mahal**</li>
+                                        <li>Bihar: **Kunwar Singh**</li>
+                                    </ul>
+                                </div>
+                                <div>
+                                    <h4 class="font-semibold text-gray-800 mb-2 text-center">Key Areas of Revolt</h4>
+                                    <p class="text-sm text-center text-gray-600 mb-2">Hover over a segment to see the leader.</p>
+                                    <div class="chart-container">
+                                        <canvas id="leadersChart"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="accordion-item bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+                        <button class="accordion-header w-full flex justify-between items-center p-4 text-left">
+                            <span class="text-lg font-semibold text-orange-700">4. Suppression & Aftermath</span>
+                            <span class="accordion-icon text-xl font-bold text-orange-700">+</span>
+                        </button>
+                        <div class="accordion-content hidden p-4 border-t border-gray-200">
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div>
+                                    <h4 class="font-semibold text-gray-800 mb-2">Teacher Activity</h4>
+                                    <p class="text-sm">Explain that although the revolt failed (lack of unity), it ended Company's rule. The British Crown (Queen Victoria) took direct control of India.</p>
+                                </div>
+                                <div>
+                                    <h4 class="font-semibold text-gray-800 mb-2">Student Activity</h4>
+                                    <p class="text-sm">Students will discuss why the Indian sepoys might have lost (e.g., old weapons, no central leadership).</p>
+                                </div>
+                                <div>
+                                    <h4 class="font-semibold text-gray-800 mb-2">Blackboard Notes</h4>
+                                    <ul class="list-disc list-inside text-sm bg-gray-100 p-3 rounded">
+                                        <li>Revolt suppressed.</li>
+                                        <li>East India Company abolished.</li>
+                                        <li>India came under the **British Crown**.</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </section>
+
+            <!-- Materials & Prep Section -->
+            <section id="prep" class="tab-content">
+                <h2 class="text-2xl font-semibold mb-4 text-orange-800">Materials & Preparation</h2>
+                <p class="mb-6 text-gray-700">Everything you need to prepare for the lesson, including teaching aids and a check on assumed student knowledge.</p>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div>
+                        <h3 class="text-xl font-semibold mb-3">Teaching Aids Checklist</h3>
+                        <h4 class="font-semibold text-gray-700 mt-4 mb-2">General Aids</h4>
+                        <ul class="list-disc list-inside space-y-2">
+                            <li>Chalk / Marker</li>
+                            <li>Black Board / White Board</li>
+                            <li>Duster</li>
+                            <li>Pointer</li>
+                        </ul>
+                        <h4 class="font-semibold text-gray-700 mt-4 mb-2">Specific Aids</h4>
+                        <ul class="list-disc list-inside space-y-2">
+                            <li>A political map of India showing centers of the revolt.</li>
+                            <li>Portraits of leaders (Bahadur Shah Zafar, Rani Lakshmibai, Nana Saheb).</li>
+                            <li>Flashcards showing the Enfield Rifle and Greased Cartridges.</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h3 class="text-xl font-semibold mb-3">Previous Knowledge Assumed</h3>
+                        <ul class="list-disc list-inside space-y-2 text-gray-700">
+                            <li>Students know that the British East India Company ruled India.</li>
+                            <li>Students are aware that Indians were unhappy with British laws and taxes.</li>
+                        </ul>
+                        <h3 class="text-xl font-semibold mb-3 mt-8">Teaching Methods</h3>
+                        <ul class="list-disc list-inside space-y-2 text-gray-700">
+                            <li>Story-telling method</li>
+                            <li>Discussion</li>
+                            <li>Question-Answer technique</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Assessment Section -->
+            <section id="assessment" class="tab-content">
+                <h2 class="text-2xl font-semibold mb-4 text-orange-800">Assessment</h2>
+                <p class="mb-6 text-gray-700">Check for understanding. This area contains questions for before (PK Testing) and after (Recapitulation) the lesson, plus homework assignments.</p>
+
+                <div class="mb-8">
+                    <h3 class="text-xl font-semibold mb-4">Previous Knowledge Testing</h3>
+                    <p class="text-sm text-gray-600 mb-4">Click on a card to flip it and see the expected answer.</p>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div class="qa-card h-40" onclick="this.classList.toggle('flipped')">
+                            <div class="qa-card-inner">
+                                <div class="qa-card-front bg-white shadow-md border border-gray-200">
+                                    <p class="font-semibold">Q1. Who ruled over India before 1947?</p>
+                                    <span class="text-xs text-gray-500 mt-4">(Click to flip)</span>
+                                </div>
+                                <div class="qa-card-back bg-orange-100 shadow-md border border-orange-200">
+                                    <p class="font-semibold">Ans: The British / East India Company.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="qa-card h-40" onclick="this.classList.toggle('flipped')">
+                            <div class="qa-card-inner">
+                                <div class="qa-card-front bg-white shadow-md border border-gray-200">
+                                    <p class="font-semibold">Q2. Were the Indian kings and farmers happy with the British rule?</p>
+                                    <span class="text-xs text-gray-500 mt-4">(Click to flip)</span>
+                                </div>
+                                <div class="qa-card-back bg-orange-100 shadow-md border border-orange-200">
+                                    <p class="font-semibold">Ans: No, they were unhappy and angry.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mb-8">
+                    <h3 class="text-xl font-semibold mb-4">Recapitulation</h3>
+                    <p class="text-sm text-gray-600 mb-4">Use these questions at the end of the lesson to check comprehension.</p>
+                    <div class="space-y-3">
+                        <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+                            <p class="font-semibold">Q1. Who was the last Mughal Emperor proclaimed as the leader of the revolt?</p>
+                            <p class="text-sm text-orange-700 mt-1">Ans: Bahadur Shah Zafar.</p>
+                        </div>
+                        <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+                            <p class="font-semibold">Q2. What was the immediate cause of the revolt?</p>
+                            <p class="text-sm text-orange-700 mt-1">Ans: The introduction of greased cartridges (Enfield Rifle).</p>
+                        </div>
+                        <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+                            <p class="font-semibold">Q3. From where did the revolt officially start on 10th May?</p>
+                            <p class="text-sm text-orange-700 mt-1">Ans: Meerut.</p>
+                        </div>
+                        <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+                            <p class="font-semibold">Q4. Who led the revolt in Jhansi?</p>
+                            <p class="text-sm text-orange-700 mt-1">Ans: Rani Lakshmibai.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <h3 class="text-xl font-semibold mb-4">Homework</h3>
+                    <ol class="list-decimal list-inside space-y-2 bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+                        <li>On an outline map of India, mark and label: Meerut, Delhi, Jhansi, Kanpur, and Lucknow.</li>
+                        <li>Write a short note on why the sepoys were angry with the British.</li>
+                        <li>Find out who Mangal Pandey was and what he did.</li>
+                    </ol>
+                </div>
+            </section>
+
+            <!-- Further Study Section -->
+            <section id="study" class="tab-content">
+                <h2 class="text-2xl font-semibold mb-4 text-orange-800">Further Suggestions for Study</h2>
+                <p class="mb-6 text-gray-700">Encourage students to explore the topic beyond the textbook with these curated resources and activities.</p>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
+                    <!-- Read & Research -->
+                    <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+                        <div class="flex items-center mb-4">
+                            <div class="bg-orange-100 p-2 rounded-full mr-3 text-2xl">📚</div>
+                            <h3 class="text-lg font-bold text-gray-900">Read & Research</h3>
+                        </div>
+                        <ul class="space-y-3 text-sm text-gray-700">
+                            <li><strong class="text-gray-900">Book:</strong> "The Last Mughal" by William Dalrymple (Selected excerpts on Bahadur Shah Zafar).</li>
+                            <li><strong class="text-gray-900">Article:</strong> Read about <em>Begum Hazrat Mahal</em> and her role in the defense of Lucknow.</li>
+                            <li><strong class="text-gray-900">Source Analysis:</strong> Find copies of the "Azamgarh Proclamation" to understand rebel demands.</li>
+                        </ul>
+                    </div>
+
+                    <!-- Watch & Visualize -->
+                    <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+                        <div class="flex items-center mb-4">
+                            <div class="bg-orange-100 p-2 rounded-full mr-3 text-2xl">🎬</div>
+                            <h3 class="text-lg font-bold text-gray-900">Watch & Visualize</h3>
+                        </div>
+                        <ul class="space-y-3 text-sm text-gray-700">
+                            <li><strong class="text-gray-900">Film:</strong> <em>Mangal Pandey: The Rising</em> (Selected clips showing the cartridge issue).</li>
+                            <li><strong class="text-gray-900">Documentary:</strong> "1857: The First War of Independence" (Prasar Bharati Archives).</li>
+                            <li><strong class="text-gray-900">Virtual Tour:</strong> Explore images of the British Residency in Lucknow (The siege site).</li>
+                        </ul>
+                    </div>
+
+                    <!-- Debate & Discuss -->
+                    <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+                        <div class="flex items-center mb-4">
+                            <div class="bg-orange-100 p-2 rounded-full mr-3 text-2xl">🗣️</div>
+                            <h3 class="text-lg font-bold text-gray-900">Debate Topic</h3>
+                        </div>
+                        <p class="text-sm text-gray-700 italic mb-3">"Was the Revolt of 1857 a 'Sepoy Mutiny' or the 'First War of Independence'?"</p>
+                        <p class="text-xs text-gray-500">Divide the class into two groups. One group argues for the British perspective (Mutiny), the other for the Indian perspective (War of Independence).</p>
+                    </div>
+
+                    <!-- Creative Project -->
+                    <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+                        <div class="flex items-center mb-4">
+                            <div class="bg-orange-100 p-2 rounded-full mr-3 text-2xl">🎨</div>
+                            <h3 class="text-lg font-bold text-gray-900">Creative Project</h3>
+                        </div>
+                        <ul class="space-y-3 text-sm text-gray-700">
+                            <li><strong class="text-gray-900">Newspaper Report:</strong> Write a report dated May 11, 1857, describing the scene in Delhi as the sepoys arrived from Meerut.</li>
+                            <li><strong class="text-gray-900">Character Sketch:</strong> Draw and describe a sepoy's uniform and equipment from the 1850s.</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+        </main>
     </div>
 
     <script>
-        // --- State Management ---
-        const state = {
-            slides: [],
-            currentSlide: 0,
-            isLoading: false,
-            errorMessage: '',
-        };
+        document.addEventListener('DOMContentLoaded', function () {
+            const tabs = document.querySelectorAll('.tab-btn');
+            const contents = document.querySelectorAll('.tab-content');
 
-        // --- DOM Elements ---
-        const promptForm = document.getElementById('prompt-form');
-        const topicInput = document.getElementById('topic');
-        const slideCountInput = document.getElementById('slide-count');
-        const docUpload = document.getElementById('doc-upload'); // NEW
-        const generateBtn = document.getElementById('generate-btn');
-        const btnText = document.getElementById('btn-text');
-        const loadingSpinner = document.getElementById('loading-spinner');
-        const errorMessageEl = document.getElementById('error-message');
-        
-        const slideViewer = document.getElementById('slide-viewer');
-        const emptyState = document.getElementById('empty-state');
-        const slideContent = document.getElementById('slide-content');
-        const slideTitle = document.getElementById('slide-title');
-        const slideBullets = document.getElementById('slide-bullets');
-        
-        const slideNav = document.getElementById('slide-nav');
-        const prevBtn = document.getElementById('prev-btn');
-        const nextBtn = document.getElementById('next-btn');
-        const slideCounter = document.getElementById('slide-counter');
-
-        // --- Gemini API Configuration ---
-        const apiKey = ""; // API key is handled by the environment
-        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
-
-        // Define the expected JSON structure for the AI response
-        const responseSchema = {
-            type: "ARRAY",
-            items: {
-                type: "OBJECT",
-                properties: {
-                    title: { type: "STRING" },
-                    bullets: {
-                        type: "ARRAY",
-                        items: { type: "STRING" }
-                    }
-                },
-                required: ["title", "bullets"]
-            }
-        };
-
-        // --- Event Listeners ---
-        promptForm.addEventListener('submit', handleGenerateClick);
-        prevBtn.addEventListener('click', showPreviousSlide);
-nextBtn.addEventListener('click', showNextSlide);
-        docUpload.addEventListener('change', handleFileUpload); // NEW
-
-        // --- NEW: File Upload Handler ---
-        /**
-         * Reads a text file and adds its content to the topic textarea.
-         */
-        function handleFileUpload(event) {
-            const file = event.target.files[0];
-            if (!file) {
-                return;
-            }
-
-            // Check for valid file types
-            if (!file.type.startsWith('text/') && !file.name.endsWith('.md')) {
-                setErrorMessage('Please upload a plain text file (.txt, .md).');
-                event.target.value = null; // Clear the input
-                return;
-            }
-
-            const reader = new FileReader();
-            
-            reader.onload = (e) => {
-                const text = e.target.result;
-                // Append text to the topic box, or set it if empty
-                topicInput.value = topicInput.value 
-                    ? topicInput.value + '\n\n--- Uploaded Content ---\n' + text 
-                    : text;
-                setErrorMessage(''); // Clear any previous errors
-            };
-            
-            reader.onerror = () => {
-                setErrorMessage('Failed to read the file.');
-            };
-            
-            reader.readAsText(file);
-            
-            // Clear the input value to allow re-uploading the same file
-            event.target.value = null;
-        }
-
-        // --- Core Functions ---
-
-        /**
-         * Handles the form submission to generate slides.
-         */
-        async function handleGenerateClick(e) {
-            e.preventDefault();
-            if (state.isLoading) return;
-
-            const topic = topicInput.value;
-            const slideCount = slideCountInput.value;
-
-            if (!topic) {
-                setErrorMessage('Please enter a topic.');
-                return;
-            }
-
-            setLoading(true);
-            setErrorMessage('');
-
-            // Construct the prompt for the AI
-            const systemPrompt = `You are a world-class presentation generation assistant.
-Your task is to create a complete, informative, and engaging slide deck based on the user's topic.
-The presentation must have exactly ${slideCount} slides.
-For each slide, provide a concise title and a list of key bullet points.
-If the user provides uploaded text, use it as the primary source material for the presentation.
-Return the result as a JSON array, adhering to the provided schema.`;
-            
-            const userQuery = `Topic & Context: "${topic}"\nNumber of Slides: ${slideCount}`;
-            
-            const payload = {
-                contents: [{ parts: [{ text: userQuery }] }],
-                systemInstruction: {
-                    parts: [{ text: systemPrompt }]
-                },
-                generationConfig: {
-                    responseMimeType: "application/json",
-                    responseSchema: responseSchema
-                }
-            };
-
-            try {
-                const result = await fetchWithBackoff(apiUrl, payload);
-                if (!result.candidates || !result.candidates[0].content.parts[0].text) {
-                    throw new Error('Invalid response from AI. Please try again.');
-                }
-
-                // Extract and parse the JSON response
-                const jsonResponse = result.candidates[0].content.parts[0].text;
-                state.slides = JSON.parse(jsonResponse);
-                state.currentSlide = 0;
-                
-                renderSlide();
-
-            } catch (error) {
-                console.error('Error generating slides:', error);
-                setErrorMessage(error.message || 'Failed to generate presentation. Please check your topic and try again.');
-                // Show empty state if slides were not generated
-                emptyState.classList.remove('hidden');
-                slideContent.classList.add('hidden');
-                slideNav.classList.add('hidden');
-            } finally {
-                setLoading(false);
-            }
-        }
-
-        /**
-         * Renders the current slide based on the state.
-         */
-        function renderSlide() {
-            if (state.slides.length === 0) {
-                emptyState.classList.remove('hidden');
-                slideContent.classList.add('hidden');
-                slideNav.classList.add('hidden');
-                return;
-            }
-
-            // Hide empty state, show slide content
-            emptyState.classList.add('hidden');
-            slideContent.classList.remove('hidden');
-            slideNav.classList.remove('hidden');
-
-            const slide = state.slides[state.currentSlide];
-
-            // Add a small fade transition
-            slideContent.classList.add('opacity-0');
-            
-            setTimeout(() => {
-                slideTitle.textContent = slide.title || 'Untitled Slide';
-                
-                // Clear old bullets
-                slideBullets.innerHTML = ''; 
-                
-                // Add new bullets
-                if (slide.bullets && slide.bullets.length > 0) {
-                    slide.bullets.forEach(bullet => {
-                        const li = document.createElement('li');
-                        li.textContent = bullet;
-                        slideBullets.appendChild(li);
-                    });
-                } else {
-                    const li = document.createElement('li');
-                    li.textContent = 'No content for this slide.';
-                    li.className = 'text-gray-400 italic';
-                    slideBullets.appendChild(li);
-                }
-                
-                slideContent.classList.remove('opacity-0');
-            }, 100); // Short delay for fade effect
-
-            updateNav();
-        }
-
-        /**
-         * Updates the navigation buttons and slide counter.
-         */
-        function updateNav() {
-            slideCounter.textContent = `Slide ${state.currentSlide + 1} / ${state.slides.length}`;
-            prevBtn.disabled = state.currentSlide === 0;
-            nextBtn.disabled = state.currentSlide === state.slides.length - 1;
-        }
-
-        function showPreviousSlide() {
-            if (state.currentSlide > 0) {
-                state.currentSlide--;
-                renderSlide();
-            }
-        }
-
-        function showNextSlide() {
-            if (state.currentSlide < state.slides.length - 1) {
-                state.currentSlide++;
-                renderSlide();
-            }
-        }
-
-        // --- UI Helper Functions ---
-
-        /**
-         * Sets the loading state for the UI.
-         * @param {boolean} isLoading
-         */
-        function setLoading(isLoading) {
-            state.isLoading = isLoading;
-            generateBtn.disabled = isLoading;
-            if (isLoading) {
-                btnText.textContent = 'Generating...';
-                loadingSpinner.classList.remove('hidden');
-            } else {
-                btnText.textContent = 'Generate Presentation';
-                loadingSpinner.classList.add('hidden');
-            }
-        }
-
-        /**
-         * Displays an error message to the user.
-         * @param {string} message
-         */
-        function setErrorMessage(message) {
-            state.errorMessage = message;
-            if (message) {
-                errorMessageEl.textContent = message;
-                errorMessageEl.classList.remove('hidden');
-            } else {
-                errorMessageEl.classList.add('hidden');
-            }
-        }
-
-        /**
-         * A robust fetch wrapper with exponential backoff.
-         */
-        async function fetchWithBackoff(url, payload, retries = 5, delay = 1000) {
-            for (let i = 0; i <= retries; i++) {
-                try {
-                    const response = await fetch(url, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(payload)
-                    });
-
-                    if (response.ok) {
-                        return await response.json();
-                    }
+            tabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    const target = tab.getAttribute('data-tab');
                     
-                    if (response.status === 429 || response.status >= 500) {
-                        // Retryable error
-                        console.warn(`Attempt ${i + 1} failed with status ${response.status}. Retrying in ${delay}ms...`);
-                        await new Promise(resolve => setTimeout(resolve, delay));
-                        delay *= 2; // Exponential backoff
-                    } else {
-                        // Non-retryable error
-                        const errorBody = await response.json();
-                        throw new Error(errorBody.error?.message || `HTTP error! Status: ${response.status}`);
-                    }
-                } catch (error) {
-                    if (i === retries) {
-                        throw new Error(`Failed to fetch after ${retries} attempts: ${error.message}`);
-                    }
-                    if (error.name !== 'AbortError' && error.name !== 'TypeError') { // Don't retry client-side errors
-                        await new Promise(resolve => setTimeout(resolve, delay));
-                        delay *= 2;
-                    } else {
-                        throw error; // Re-throw client-side errors immediately
-                    }
-                }
-            }
-            throw new Error('Failed to get a response from the AI after all retries.');
-        }
+                    tabs.forEach(t => t.classList.remove('active'));
+                    tab.classList.add('active');
+                    
+                    contents.forEach(c => {
+                        c.classList.remove('active');
+                        if (c.id === target) {
+                            c.classList.add('active');
+                        }
+                    });
 
-        // --- Initialization ---
-        lucide.createIcons(); // Render all lucide icons
+                    if (target === 'flow') {
+                        initChart();
+                    }
+                });
+            });
+
+            const accordions = document.querySelectorAll('.accordion-item');
+            accordions.forEach(item => {
+                const header = item.querySelector('.accordion-header');
+                const content = item.querySelector('.accordion-content');
+                const icon = item.querySelector('.accordion-icon');
+
+                header.addEventListener('click', () => {
+                    const isOpen = !content.classList.contains('hidden');
+                    
+                    accordions.forEach(i => {
+                        i.querySelector('.accordion-content').classList.add('hidden');
+                        i.querySelector('.accordion-icon').textContent = '+';
+                    });
+                    
+                    if (!isOpen) {
+                        content.classList.remove('hidden');
+                        icon.textContent = '-';
+                    }
+                });
+            });
+
+            let chartInstance = null;
+            function initChart() {
+                if (chartInstance) {
+                    return;
+                }
+                const ctx = document.getElementById('leadersChart').getContext('2d');
+                const leadersData = {
+                    labels: ['Kanpur', 'Jhansi', 'Lucknow', 'Bihar'],
+                    datasets: [{
+                        data: [1, 1, 1, 1],
+                        backgroundColor: [
+                            '#f97316', 
+                            '#ea580c', 
+                            '#d97706',
+                            '#c2410c'  
+                        ],
+                        hoverBackgroundColor: [
+                            '#fb923c',
+                            '#f97316',
+                            '#f59e0b',
+                            '#ea580c'
+                        ],
+                        borderColor: '#f9fafb',
+                        borderWidth: 2
+                    }]
+                };
+                
+                const leadersTooltips = {
+                    'Kanpur': 'Nana Saheb',
+                    'Jhansi': 'Rani Lakshmibai',
+                    'Lucknow': 'Begum Hazrat Mahal',
+                    'Bihar': 'Kunwar Singh'
+                };
+
+                chartInstance = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: leadersData,
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                labels: {
+                                    padding: 15
+                                }
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        const label = context.label || '';
+                                        const leader = leadersTooltips[label] || '';
+                                        return `${label}: ${leader}`;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        });
     </script>
+
 </body>
 </html>
-
