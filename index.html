@@ -1,561 +1,413 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="scroll-smooth">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Interactive Lesson Plan: Revolt of 1857</title>
+    <title>Interactive Lesson Plan: How, When and Where</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <!-- 
+    Chosen Palette: Calm Indigo & Gray
+    Application Structure Plan: The SPA uses a single-page, scrolling structure with a sticky navigation header ("Overview," "Objectives," "Lesson Flow," "Assessment"). This replaces the linear PDF format with a task-oriented dashboard. Users can immediately jump to the section they need (e.g., an observer can check "Objectives," a teacher can review the "Lesson Flow"). The key interactions are: 1) Sticky nav for quick jumps. 2) An interactive set of buttons for "Learning Objectives," which reveals content for one Bloom's Taxonomy category at a time, preventing information overload. 3) A transformation of the PDF's 4-column "Presentation" table into a vertical, step-by-step "Main Activity Sequence," which is far more readable and usable for a teacher following the plan.
+    Visualization & Content Choices:
+    - Report Info: Lesson Metadata (Class, Subject, etc.) -> Goal: Inform -> Viz/Method: HTML/Tailwind Grid -> Interaction: None -> Justification: Clear "at-a-glance" overview.
+    - Report Info: Specific Objectives (Bloom's list) -> Goal: Organize & Explore -> Viz/Method: JS-powered buttons showing/hiding content divs -> Interaction: Click-to-reveal -> Justification: Breaks down a long, dense list into consumable, focused chunks.
+    - Report Info: 4-Column Presentation Table -> Goal: Change/Process -> Viz/Method: Structured HTML cards (Step 1, Step 2...) with clear subheadings (Teacher Activity, Student Activity, Blackboard) -> Interaction: None (scrolling) -> Justification: Transforms a wide, unreadable table into a vertical, sequential flow that mimics actual lesson delivery.
+    - Report Info: PK Testing, Recapitulation, Homework -> Goal: Inform/Assess -> Viz/Method: Simple HTML lists/Q&A format -> Interaction: None -> Justification: Most direct and clear presentation.
+    - Note: No quantitative data exists in the report, so no charts (Chart.js) were used.
+    CONFIRMATION: NO SVG graphics used. NO Mermaid JS used.
+    -->
     <style>
         body {
             font-family: 'Inter', sans-serif;
         }
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-        
-        .tab-btn.active {
-            border-bottom-color: #c2410c; 
-            color: #c2410c;
-            font-weight: 600;
+        .sticky-nav {
+            position: sticky;
+            top: 0;
+            z-index: 50;
         }
-        .tab-btn {
-            border-bottom-color: transparent;
+        .nav-link {
+            transition: color 0.2s, border-bottom-color 0.2s;
+            border-bottom: 2px solid transparent;
         }
-        .tab-content {
+        .nav-link.active,
+        .nav-link:hover {
+            color: #4f46e5; /* indigo-600 */
+            border-bottom-color: #4f46e5; /* indigo-600 */
+        }
+        .objective-btn {
+            transition: all 0.2s;
+        }
+        .objective-btn.active {
+            background-color: #4f46e5; /* indigo-600 */
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+        .hidden-content {
             display: none;
         }
-        .tab-content.active {
-            display: block;
-        }
-        .chart-container {
-            position: relative;
-            width: 100%;
-            max-width: 400px;
-            margin-left: auto;
-            margin-right: auto;
-            height: 300px;
-            max-height: 350px;
-        }
-        @media (min-width: 640px) {
-            .chart-container {
-                height: 350px;
-            }
-        }
-        
-        .qa-card {
-            perspective: 1000px;
-        }
-        .qa-card-inner {
-            position: relative;
-            width: 100%;
-            height: 100%;
-            transition: transform 0.6s;
-            transform-style: preserve-3d;
-        }
-        .qa-card.flipped .qa-card-inner {
-            transform: rotateY(180deg);
-        }
-        .qa-card-front, .qa-card-back {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            -webkit-backface-visibility: hidden;
-            backface-visibility: hidden;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
+        .content-card {
+            background-color: #f9fafb; /* gray-50 */
+            border: 1px solid #e5e7eb; /* gray-200 */
+            border-radius: 0.75rem;
             padding: 1.5rem;
-            border-radius: 0.5rem;
+            transition: all 0.3s ease-in-out;
         }
-        .qa-card-back {
-            transform: rotateY(180deg);
+        .content-card:hover {
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            transform: translateY(-2px);
         }
     </style>
-    <!-- Chosen Palette: Warm Neutrals (Gray-50/Orange-50 base, Gray-800 text, Orange-600 accent) -->
-    <!-- Application Structure Plan: A tabbed SPA with five sections: 'Overview', 'Lesson Flow', 'Materials & Prep', 'Assessment', and 'Further Study'. This structure keeps the core lesson plan clean while offering a dedicated space for extension activities. -->
-    <!-- Visualization & Content Choices: Added a 'Further Study' section with categorized cards (Read, Watch, Debate) to present extension ideas clearly. -->
-    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
 </head>
-<body class="bg-gray-50 text-gray-800">
+<body class="bg-white text-gray-800 antialiased">
 
-    <div class="container mx-auto p-4 md:p-8 max-w-7xl">
-
-        <!-- Header -->
-        <header class="mb-8">
-            <h1 class="text-3xl md:text-4xl font-bold text-gray-900">Interactive Lesson Plan</h1>
-            <p class="text-xl md:text-2xl text-orange-700">When People Rebel: 1857 and After</p>
-            <div class="flex space-x-4 mt-2 text-sm text-gray-600">
-                <span class="bg-gray-200 px-3 py-1 rounded-full">Class: VIII</span>
-                <span class="bg-gray-200 px-3 py-1 rounded-full">Subject: Social Studies (History)</span>
+    <!-- Sticky Navigation Header -->
+    <header class="sticky-nav bg-white/95 backdrop-blur-sm shadow-sm border-b border-gray-200">
+        <nav class="container mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col sm:flex-row justify-between items-center">
+            <h1 class="text-xl font-bold text-indigo-600">Lesson: How, When and Where</h1>
+            <div class="flex flex-wrap justify-center gap-4 sm:gap-6 mt-3 sm:mt-0">
+                <a href="#overview" class="nav-link text-sm sm:text-base font-medium text-gray-600 px-1 py-1">Overview</a>
+                <a href="#objectives" class="nav-link text-sm sm:text-base font-medium text-gray-600 px-1 py-1">Objectives</a>
+                <a href="#flow" class="nav-link text-sm sm:text-base font-medium text-gray-600 px-1 py-1">Lesson Flow</a>
+                <a href="#assessment" class="nav-link text-sm sm:text-base font-medium text-gray-600 px-1 py-1">Assessment</a>
             </div>
-            <p class="mt-4 text-gray-700 max-w-4xl">This interactive application transforms the static lesson plan for 'The Revolt of 1857' into a dynamic tool for teachers. Navigate through the tabs to access objectives, lesson flow, assessments, and extension activities.</p>
-        </header>
-
-        <!-- Tab Navigation -->
-        <nav class="flex overflow-x-auto border-b border-gray-300 mb-8 whitespace-nowrap" id="tab-nav">
-            <button class="tab-btn active text-sm md:text-base py-3 px-4 md:px-6 border-b-2 font-medium" data-tab="overview">Overview</button>
-            <button class="tab-btn text-sm md:text-base py-3 px-4 md:px-6 border-b-2 font-medium text-gray-600 hover:text-gray-900" data-tab="flow">Lesson Flow</button>
-            <button class="tab-btn text-sm md:text-base py-3 px-4 md:px-6 border-b-2 font-medium text-gray-600 hover:text-gray-900" data-tab="prep">Materials & Prep</button>
-            <button class="tab-btn text-sm md:text-base py-3 px-4 md:px-6 border-b-2 font-medium text-gray-600 hover:text-gray-900" data-tab="assessment">Assessment</button>
-            <button class="tab-btn text-sm md:text-base py-3 px-4 md:px-6 border-b-2 font-medium text-gray-600 hover:text-gray-900" data-tab="study">Further Study</button>
         </nav>
+    </header>
 
-        <!-- Tab Content -->
-        <main>
-            <!-- Overview Section -->
-            <section id="overview" class="tab-content active">
-                <h2 class="text-2xl font-semibold mb-4 text-orange-800">Overview</h2>
-                <p class="mb-6 text-gray-700">Start here to understand the 'why' and 'what' of the lesson. This section details the main learning goals, from simple recall to creative tasks, structured around Bloom's Taxonomy.</p>
-                
-                <div class="mb-8">
-                    <h3 class="text-xl font-semibold mb-3">General Objectives</h3>
-                    <ul class="list-disc list-inside space-y-2 text-gray-700">
-                        <li>To develop the thinking and reasoning power of the Students regarding historical events.</li>
-                        <li>To develop the interest of the students in the struggle for Indian independence.</li>
-                        <li>To enable the students to understand the impact of colonial policies on different sections of society.</li>
+    <!-- Main Content -->
+    <main class="container mx-auto p-4 sm:p-6 lg:p-10 max-w-5xl">
+
+        <!-- Section 1: Overview -->
+        <section id="overview" class="mb-16 scroll-mt-24">
+            <h2 class="text-3xl font-bold text-gray-900 border-b-2 border-indigo-200 pb-2 mb-6">
+                Lesson Overview
+            </h2>
+            <p class="text-lg text-gray-700 mb-8">
+                This section provides the high-level details for this lesson plan, including the target class, topic, and the primary teaching goals. It's the "at-a-glance" summary of the entire plan.
+            </p>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                <div class="content-card">
+                    <h3 class="text-xl font-semibold text-indigo-600 mb-3">Lesson Details</h3>
+                    <ul class="space-y-2 text-gray-700">
+                        <li><strong>Class:</strong> VIII</li>
+                        <li><strong>Subject:</strong> Social Studies (History)</li>
+                        <li><strong>Topic:</strong> How, when And where (Chapter 1)</li>
+                        <li><strong>Sub-Topic:</strong> Periodisation and colonial Rule</li>
+                        <li><strong>Duration:</strong> 15 minutes</li>
                     </ul>
                 </div>
-
-                <div>
-                    <h3 class="text-xl font-semibold mb-4">Specific Objectives (Bloom's Taxonomy)</h3>
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
-                            <h4 class="font-bold text-lg text-orange-700">Remembering</h4>
-                            <ul class="list-disc list-inside mt-2 space-y-1 text-sm">
-                                <li>Remember the date of the outbreak (10 May 1857).</li>
-                                <li>Recall names of key leaders (Rani Lakshmibai, Mangal Pandey).</li>
-                            </ul>
-                        </div>
-                        <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
-                            <h4 class="font-bold text-lg text-orange-700">Understanding</h4>
-                            <ul class="list-disc list-inside mt-2 space-y-1 text-sm">
-                                <li>Summarize the political and military causes.</li>
-                                <li>Explain why 'Greased Cartridges' triggered the sepoys.</li>
-                            </ul>
-                        </div>
-                        <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
-                            <h4 class="font-bold text-lg text-orange-700">Applying</h4>
-                            <ul class="list-disc list-inside mt-2 space-y-1 text-sm">
-                                <li>Mark main centers of revolt (Meerut, Delhi) on a map.</li>
-                                <li>Relate "Doctrine of Lapse" to the anger of rulers.</li>
-                            </ul>
-                        </div>
-                        <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
-                            <h4 class="font-bold text-lg text-orange-700">Analysis</h4>
-                            <ul class="list-disc list-inside mt-2 space-y-1 text-sm">
-                                <li>Analyze the reasons for the failure of the revolt.</li>
-                                <li>Break down how the rebellion spread to common people.</li>
-                            </ul>
-                        </div>
-                        <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
-                            <h4 class="font-bold text-lg text-orange-700">Evaluate</h4>
-                            <ul class="list-disc list-inside mt-2 space-y-1 text-sm">
-                                <li>Evaluate the consequences (End of EIC rule).</li>
-                                <li>Justify why it's called the "First War of Independence."</li>
-                            </ul>
-                        </div>
-                        <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
-                            <h4 class="font-bold text-lg text-orange-700">Create</h4>
-                            <ul class="list-disc list-inside mt-2 space-y-1 text-sm">
-                                <li>Create a short diary entry from a sepoy's perspective.</li>
-                                <li>Construct a timeline of events from Barrackpore to Delhi.</li>
-                            </ul>
-                        </div>
-                    </div>
+                <div class="content-card">
+                    <h3 class="text-xl font-semibold text-indigo-600 mb-3">General Objectives</h3>
+                    <ul class="space-y-2 text-gray-700 list-disc list-outside ml-5">
+                        <li>To develop thinking and reasoning power of the Students.</li>
+                        <li>To develop the interest of the students in the subject.</li>
+                        <li>To enable the students to understand the concept of periodisation.</li>
+                    </ul>
                 </div>
-            </section>
+            </div>
+        </section>
 
-            <!-- Lesson Flow Section -->
-            <section id="flow" class="tab-content">
-                <h2 class="text-2xl font-semibold mb-4 text-orange-800">Lesson Flow</h2>
-                <p class="mb-6 text-gray-700">This is the core, step-by-step guide for delivering the lesson. Each section breaks down the content, teacher actions, student activities, and key points for the board.</p>
-                <div class="space-y-4" id="accordion-container">
-                    
-                    <div class="accordion-item bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-                        <button class="accordion-header w-full flex justify-between items-center p-4 text-left">
-                            <span class="text-lg font-semibold text-orange-700">1. Causes of the Revolt</span>
-                            <span class="accordion-icon text-xl font-bold text-orange-700">+</span>
-                        </button>
-                        <div class="accordion-content hidden p-4 border-t border-gray-200">
-                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <div>
-                                    <h4 class="font-semibold text-gray-800 mb-2">Teacher Activity</h4>
-                                    <p class="text-sm">Explain policies like "Doctrine of Lapse" (Lord Dalhousie). Discuss the immediate cause: The Enfield Rifle cartridges rumored to be greased with cow and pig fat.</p>
-                                </div>
-                                <div>
-                                    <h4 class="font-semibold text-gray-800 mb-2">Student Activity</h4>
-                                    <p class="text-sm">Students will listen carefully and note down the main causes.</p>
-                                </div>
-                                <div>
-                                    <h4 class="font-semibold text-gray-800 mb-2">Blackboard Notes</h4>
-                                    <ul class="list-disc list-inside text-sm bg-gray-100 p-3 rounded">
-                                        <li>**Political**: Kings lost power (Doctrine of Lapse).</li>
-                                        <li>**Social**: Interference in religion.</li>
-                                        <li>**Immediate**: Greased Cartridges.</li>
-                                    </ul>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+        <!-- Section 2: Learning Objectives -->
+        <section id="objectives" class="mb-16 scroll-mt-24">
+            <h2 class="text-3xl font-bold text-gray-900 border-b-2 border-indigo-200 pb-2 mb-6">
+                Learning Objectives
+            </h2>
+            <p class="text-lg text-gray-700 mb-8">
+                This section breaks down the specific learning outcomes for students, categorized by Bloom's Taxonomy. Click each button to see the specific objectives for that cognitive level.
+            </p>
+            
+            <div class="flex flex-wrap gap-2 md:gap-3 mb-6">
+                <button class="objective-btn active text-sm sm:text-base bg-white border border-gray-300 text-gray-700 font-medium py-2 px-4 rounded-full shadow-sm hover:bg-gray-100" data-target="obj-remembering">Remembering</button>
+                <button class="objective-btn text-sm sm:text-base bg-white border border-gray-300 text-gray-700 font-medium py-2 px-4 rounded-full shadow-sm hover:bg-gray-100" data-target="obj-understanding">Understanding</button>
+                <button class="objective-btn text-sm sm:text-base bg-white border border-gray-300 text-gray-700 font-medium py-2 px-4 rounded-full shadow-sm hover:bg-gray-100" data-target="obj-applying">Applying</button>
+                <button class="objective-btn text-sm sm:text-base bg-white border border-gray-300 text-gray-700 font-medium py-2 px-4 rounded-full shadow-sm hover:bg-gray-100" data-target="obj-analysis">Analysis</button>
+                <button class="objective-btn text-sm sm:text-base bg-white border border-gray-300 text-gray-700 font-medium py-2 px-4 rounded-full shadow-sm hover:bg-gray-100" data-target="obj-evaluate">Evaluate</button>
+                <button class="objective-btn text-sm sm:text-base bg-white border border-gray-300 text-gray-700 font-medium py-2 px-4 rounded-full shadow-sm hover:bg-gray-100" data-target="obj-create">Create</button>
+            </div>
 
-                    <div class="accordion-item bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-                        <button class="accordion-header w-full flex justify-between items-center p-4 text-left">
-                            <span class="text-lg font-semibold text-orange-700">2. The Outbreak</span>
-                            <span class="accordion-icon text-xl font-bold text-orange-700">+</span>
-                        </button>
-                        <div class="accordion-content hidden p-4 border-t border-gray-200">
-                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <div>
-                                    <h4 class="font-semibold text-gray-800 mb-2">Teacher Activity</h4>
-                                    <p class="text-sm">Narrate the story of Mangal Pandey attacking officers and the sepoys marching from Meerut to Delhi to declare Bahadur Shah Zafar as their leader.</p>
-                                </div>
-                                <div>
-                                    <h4 class="font-semibold text-gray-800 mb-2">Student Activity</h4>
-                                    <p class="text-sm">Students will look at the map to trace the path from Meerut to Delhi.</p>
-                                </div>
-                                <div>
-                                    <h4 class="font-semibold text-gray-800 mb-2">Blackboard Notes</h4>
-                                    <ul class="list-disc list-inside text-sm bg-gray-100 p-3 rounded">
-                                        <li>**Date**: 10 May 1857</li>
-                                        <li>**Place**: Meerut</li>
-                                        <li>**First Martyr**: Mangal Pandey</li>
-                                        <li>**Leader**: Bahadur Shah Zafar</li>
-                                    </ul>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="accordion-item bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-                        <button class="accordion-header w-full flex justify-between items-center p-4 text-left">
-                            <span class="text-lg font-semibold text-orange-700">3. Key Leaders & Spread</span>
-                            <span class="accordion-icon text-xl font-bold text-orange-700">+</span>
-                        </button>
-                        <div class="accordion-content hidden p-4 border-t border-gray-200">
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                    <h4 class="font-semibold text-gray-800 mb-2">Teacher Activity</h4>
-                                    <p class="text-sm">Show pictures of leaders and match them to their regions: Nana Saheb (Kanpur), Rani Lakshmibai (Jhansi), Kunwar Singh (Bihar).</p>
-                                    <h4 class="font-semibold text-gray-800 mb-2 mt-4">Student Activity</h4>
-                                    <p class="text-sm">Students will note down the leaders and their respective regions.</p>
-                                    <h4 class="font-semibold text-gray-800 mb-2 mt-4">Blackboard Notes</h4>
-                                    <ul class="list-disc list-inside text-sm bg-gray-100 p-3 rounded">
-                                        <li>Kanpur: **Nana Saheb**</li>
-                                        <li>Jhansi: **Rani Lakshmibai**</li>
-                                        <li>Lucknow: **Begum Hazrat Mahal**</li>
-                                        <li>Bihar: **Kunwar Singh**</li>
-                                    </ul>
-                                </div>
-                                <div>
-                                    <h4 class="font-semibold text-gray-800 mb-2 text-center">Key Areas of Revolt</h4>
-                                    <p class="text-sm text-center text-gray-600 mb-2">Hover over a segment to see the leader.</p>
-                                    <div class="chart-container">
-                                        <canvas id="leadersChart"></canvas>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="accordion-item bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-                        <button class="accordion-header w-full flex justify-between items-center p-4 text-left">
-                            <span class="text-lg font-semibold text-orange-700">4. Suppression & Aftermath</span>
-                            <span class="accordion-icon text-xl font-bold text-orange-700">+</span>
-                        </button>
-                        <div class="accordion-content hidden p-4 border-t border-gray-200">
-                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <div>
-                                    <h4 class="font-semibold text-gray-800 mb-2">Teacher Activity</h4>
-                                    <p class="text-sm">Explain that although the revolt failed (lack of unity), it ended Company's rule. The British Crown (Queen Victoria) took direct control of India.</p>
-                                </div>
-                                <div>
-                                    <h4 class="font-semibold text-gray-800 mb-2">Student Activity</h4>
-                                    <p class="text-sm">Students will discuss why the Indian sepoys might have lost (e.g., old weapons, no central leadership).</p>
-                                </div>
-                                <div>
-                                    <h4 class="font-semibold text-gray-800 mb-2">Blackboard Notes</h4>
-                                    <ul class="list-disc list-inside text-sm bg-gray-100 p-3 rounded">
-                                        <li>Revolt suppressed.</li>
-                                        <li>East India Company abolished.</li>
-                                        <li>India came under the **British Crown**.</li>
-                                    </ul>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
+            <div class="content-card min-h-[150px]">
+                <div id="obj-remembering" class="objective-content space-y-2">
+                    <h4 class="text-lg font-semibold text-gray-800">Remembering</h4>
+                    <ul class="list-disc list-outside ml-5 text-gray-700">
+                        <li>Students will be able to remember the definition of periodisation.</li>
+                        <li>Students will be able to recall sources of information.</li>
+                    </ul>
                 </div>
-            </section>
+                <div id="obj-understanding" class="objective-content hidden-content space-y-2">
+                    <h4 class="text-lg font-semibold text-gray-800">Understanding</h4>
+                    <ul class="list-disc list-outside ml-5 text-gray-700">
+                        <li>Students will be able to summarise the concept of colonisation.</li>
+                        <li>Students will be able to explain the process of periodisation.</li>
+                    </ul>
+                </div>
+                <div id="obj-applying" class="objective-content hidden-content space-y-2">
+                    <h4 class="text-lg font-semibold text-gray-800">Applying</h4>
+                    <ul class="list-disc list-outside ml-5 text-gray-700">
+                        <li>Students will be able to relate the events that are happening in the present day society to that during the colonial period.</li>
+                        <li>Students will be able to sketch out the situation Indians were in, during the colonial period.</li>
+                    </ul>
+                </div>
+                <div id="obj-analysis" class="objective-content hidden-content space-y-2">
+                    <h4 class="text-lg font-semibold text-gray-800">Analysis</h4>
+                    <ul class="list-disc list-outside ml-5 text-gray-700">
+                        <li>Students will be able to analyse the James Mill's periodisation.</li>
+                        <li>Students will be able to break down the process of periodisation.</li>
+                    </ul>
+                </div>
+                <div id="obj-evaluate" class="objective-content hidden-content space-y-2">
+                    <h4 class="text-lg font-semibold text-gray-800">Evaluate</h4>
+                    <ul class="list-disc list-outside ml-5 text-gray-700">
+                        <li>Students will be able to evaluate the effects of colonial rule in India.</li>
+                        <li>Students will be able to understand the reasoning method of the British people.</li>
+                    </ul>
+                </div>
+                <div id="obj-create" class="objective-content hidden-content space-y-2">
+                    <h4 class="text-lg font-semibold text-gray-800">Create</h4>
+                    <ul class="list-disc list-outside ml-5 text-gray-700">
+                        <li>Students will be able to comprehend to the concept of periodisation.</li>
+                        <li>Students will be able to create a short paragraph on the effect of colonial rule on Modern India.</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
 
-            <!-- Materials & Prep Section -->
-            <section id="prep" class="tab-content">
-                <h2 class="text-2xl font-semibold mb-4 text-orange-800">Materials & Preparation</h2>
-                <p class="mb-6 text-gray-700">Everything you need to prepare for the lesson, including teaching aids and a check on assumed student knowledge.</p>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <!-- Section 3: Lesson Flow -->
+        <section id="flow" class="mb-16 scroll-mt-24">
+            <h2 class="text-3xl font-bold text-gray-900 border-b-2 border-indigo-200 pb-2 mb-6">
+                Lesson Flow & Activities
+            </h2>
+            <p class="text-lg text-gray-700 mb-8">
+                This section details the "how" of the lesson. It includes the materials needed and a step-by-step sequence of the main teaching activity, transforming the original table into a clear, actionable guide.
+            </p>
+
+            <div class="content-card mb-8">
+                <h3 class="text-xl font-semibold text-indigo-600 mb-4">Materials & Methods</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
-                        <h3 class="text-xl font-semibold mb-3">Teaching Aids Checklist</h3>
-                        <h4 class="font-semibold text-gray-700 mt-4 mb-2">General Aids</h4>
-                        <ul class="list-disc list-inside space-y-2">
+                        <h4 class="text-lg font-semibold text-gray-800 mb-2">General Aids</h4>
+                        <ul class="list-disc list-outside ml-5 text-gray-700">
                             <li>Chalk / Marker</li>
                             <li>Black Board / White Board</li>
                             <li>Duster</li>
-                            <li>Pointer</li>
-                        </ul>
-                        <h4 class="font-semibold text-gray-700 mt-4 mb-2">Specific Aids</h4>
-                        <ul class="list-disc list-inside space-y-2">
-                            <li>A political map of India showing centers of the revolt.</li>
-                            <li>Portraits of leaders (Bahadur Shah Zafar, Rani Lakshmibai, Nana Saheb).</li>
-                            <li>Flashcards showing the Enfield Rifle and Greased Cartridges.</li>
                         </ul>
                     </div>
                     <div>
-                        <h3 class="text-xl font-semibold mb-3">Previous Knowledge Assumed</h3>
-                        <ul class="list-disc list-inside space-y-2 text-gray-700">
-                            <li>Students know that the British East India Company ruled India.</li>
-                            <li>Students are aware that Indians were unhappy with British laws and taxes.</li>
+                        <h4 class="text-lg font-semibold text-gray-800 mb-2">Specific Aids</h4>
+                        <ul class="list-disc list-outside ml-5 text-gray-700">
+                            <li>A video clip showing different periods in India.</li>
+                            <li>Flash Cards</li>
                         </ul>
-                        <h3 class="text-xl font-semibold mb-3 mt-8">Teaching Methods</h3>
-                        <ul class="list-disc list-inside space-y-2 text-gray-700">
-                            <li>Story-telling method</li>
-                            <li>Discussion</li>
-                            <li>Question-Answer technique</li>
-                        </ul>
+                        <h4 class="text-lg font-semibold text-gray-800 mt-4 mb-2">Teaching Methods</h4>
+                        <p class="text-gray-700">Discussion</p>
                     </div>
                 </div>
-            </section>
+            </div>
 
-            <!-- Assessment Section -->
-            <section id="assessment" class="tab-content">
-                <h2 class="text-2xl font-semibold mb-4 text-orange-800">Assessment</h2>
-                <p class="mb-6 text-gray-700">Check for understanding. This area contains questions for before (PK Testing) and after (Recapitulation) the lesson, plus homework assignments.</p>
-
-                <div class="mb-8">
-                    <h3 class="text-xl font-semibold mb-4">Previous Knowledge Testing</h3>
-                    <p class="text-sm text-gray-600 mb-4">Click on a card to flip it and see the expected answer.</p>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div class="qa-card h-40" onclick="this.classList.toggle('flipped')">
-                            <div class="qa-card-inner">
-                                <div class="qa-card-front bg-white shadow-md border border-gray-200">
-                                    <p class="font-semibold">Q1. Who ruled over India before 1947?</p>
-                                    <span class="text-xs text-gray-500 mt-4">(Click to flip)</span>
-                                </div>
-                                <div class="qa-card-back bg-orange-100 shadow-md border border-orange-200">
-                                    <p class="font-semibold">Ans: The British / East India Company.</p>
-                                </div>
-                            </div>
+            <h3 class="text-2xl font-semibold text-gray-900 mb-6">Main Activity Sequence</h3>
+            <div class="space-y-6">
+                <!-- Step 1 -->
+                <div class="content-card">
+                    <span class="text-sm font-semibold text-indigo-500 bg-indigo-100 py-1 px-3 rounded-full">Step 1</span>
+                    <h4 class="text-xl font-semibold text-gray-800 mt-3 mb-4">Content: How Do We Periodise</h4>
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <div>
+                            <h5 class="text-lg font-semibold text-gray-700 mb-2">Teacher Activity</h5>
+                            <p class="text-gray-700">The pupil Teacher will explain about the importance of Periodisation. After that the pupil Teacher will explain about James Mill's Periodisation.</p>
                         </div>
-                        <div class="qa-card h-40" onclick="this.classList.toggle('flipped')">
-                            <div class="qa-card-inner">
-                                <div class="qa-card-front bg-white shadow-md border border-gray-200">
-                                    <p class="font-semibold">Q2. Were the Indian kings and farmers happy with the British rule?</p>
-                                    <span class="text-xs text-gray-500 mt-4">(Click to flip)</span>
-                                </div>
-                                <div class="qa-card-back bg-orange-100 shadow-md border border-orange-200">
-                                    <p class="font-semibold">Ans: No, they were unhappy and angry.</p>
-                                </div>
-                            </div>
+                        <div>
+                            <h5 class="text-lg font-semibold text-gray-700 mb-2">Student Activity</h5>
+                            <p class="text-gray-700">The students will listen carefully and make notes when required.</p>
+                        </div>
+                        <div>
+                            <h5 class="text-lg font-semibold text-gray-700 mb-2">Blackboard Work</h5>
+                            <ul class="list-disc list-outside ml-5 text-gray-700 space-y-1">
+                                <li><strong>James Mill's Periodisation:</strong><br>→ Hindu Era<br>→ Muslim Era<br>→ British Era</li>
+                                <li><strong>Periodisation (Followed):</strong><br>→ Ancient India<br>→ Medieval India<br>→ Modern India</li>
+                            </ul>
                         </div>
                     </div>
                 </div>
-
-                <div class="mb-8">
-                    <h3 class="text-xl font-semibold mb-4">Recapitulation</h3>
-                    <p class="text-sm text-gray-600 mb-4">Use these questions at the end of the lesson to check comprehension.</p>
-                    <div class="space-y-3">
-                        <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
-                            <p class="font-semibold">Q1. Who was the last Mughal Emperor proclaimed as the leader of the revolt?</p>
-                            <p class="text-sm text-orange-700 mt-1">Ans: Bahadur Shah Zafar.</p>
+                <!-- Step 2 -->
+                <div class="content-card">
+                    <span class="text-sm font-semibold text-indigo-500 bg-indigo-100 py-1 px-3 rounded-full">Step 2</span>
+                    <h4 class="text-xl font-semibold text-gray-800 mt-3 mb-4">Content: What is Colonial</h4>
+                     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <div>
+                            <h5 class="text-lg font-semibold text-gray-700 mb-2">Teacher Activity</h5>
+                            <p class="text-gray-700">Pupil Teacher will explain about what colonial is and write the important things on the board.</p>
                         </div>
-                        <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
-                            <p class="font-semibold">Q2. What was the immediate cause of the revolt?</p>
-                            <p class="text-sm text-orange-700 mt-1">Ans: The introduction of greased cartridges (Enfield Rifle).</p>
+                        <div>
+                            <h5 class="text-lg font-semibold text-gray-700 mb-2">Student Activity</h5>
+                            <p class="text-gray-700">Students will listen carefully and make notes when required.</p>
                         </div>
-                        <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
-                            <p class="font-semibold">Q3. From where did the revolt officially start on 10th May?</p>
-                            <p class="text-sm text-orange-700 mt-1">Ans: Meerut.</p>
-                        </div>
-                        <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
-                            <p class="font-semibold">Q4. Who led the revolt in Jhansi?</p>
-                            <p class="text-sm text-orange-700 mt-1">Ans: Rani Lakshmibai.</p>
+                        <div>
+                            <h5 class="text-lg font-semibold text-gray-700 mb-2">Blackboard Work</h5>
+                            <p class="text-gray-700"><strong>COLONIAL:</strong><br>When one country is subjugated by another country.</p>
                         </div>
                     </div>
                 </div>
-
-                <div>
-                    <h3 class="text-xl font-semibold mb-4">Homework</h3>
-                    <ol class="list-decimal list-inside space-y-2 bg-white p-4 rounded-lg shadow-sm border border-gray-200">
-                        <li>On an outline map of India, mark and label: Meerut, Delhi, Jhansi, Kanpur, and Lucknow.</li>
-                        <li>Write a short note on why the sepoys were angry with the British.</li>
-                        <li>Find out who Mangal Pandey was and what he did.</li>
-                    </ol>
-                </div>
-            </section>
-
-            <!-- Further Study Section -->
-            <section id="study" class="tab-content">
-                <h2 class="text-2xl font-semibold mb-4 text-orange-800">Further Suggestions for Study</h2>
-                <p class="mb-6 text-gray-700">Encourage students to explore the topic beyond the textbook with these curated resources and activities.</p>
-
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
-                    <!-- Read & Research -->
-                    <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-                        <div class="flex items-center mb-4">
-                            <div class="bg-orange-100 p-2 rounded-full mr-3 text-2xl">📚</div>
-                            <h3 class="text-lg font-bold text-gray-900">Read & Research</h3>
+                <!-- Step 3 -->
+                <div class="content-card">
+                    <span class="text-sm font-semibold text-indigo-500 bg-indigo-100 py-1 px-3 rounded-full">Step 3</span>
+                    <h4 class="text-xl font-semibold text-gray-800 mt-3 mb-4">Content: How Do We Know</h4>
+                     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <div>
+                            <h5 class="text-lg font-semibold text-gray-700 mb-2">Teacher Activity</h5>
+                            <p class="text-gray-700">Pupil Teacher will explain the sources and show some pictures.</p>
                         </div>
-                        <ul class="space-y-3 text-sm text-gray-700">
-                            <li><strong class="text-gray-900">Book:</strong> "The Last Mughal" by William Dalrymple (Selected excerpts on Bahadur Shah Zafar).</li>
-                            <li><strong class="text-gray-900">Article:</strong> Read about <em>Begum Hazrat Mahal</em> and her role in the defense of Lucknow.</li>
-                            <li><strong class="text-gray-900">Source Analysis:</strong> Find copies of the "Azamgarh Proclamation" to understand rebel demands.</li>
-                        </ul>
-                    </div>
-
-                    <!-- Watch & Visualize -->
-                    <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-                        <div class="flex items-center mb-4">
-                            <div class="bg-orange-100 p-2 rounded-full mr-3 text-2xl">🎬</div>
-                            <h3 class="text-lg font-bold text-gray-900">Watch & Visualize</h3>
+                        <div>
+                            <h5 class="text-lg font-semibold text-gray-700 mb-2">Student Activity</h5>
+                            <p class="text-gray-700">Students will make notes.</p>
                         </div>
-                        <ul class="space-y-3 text-sm text-gray-700">
-                            <li><strong class="text-gray-900">Film:</strong> <em>Mangal Pandey: The Rising</em> (Selected clips showing the cartridge issue).</li>
-                            <li><strong class="text-gray-900">Documentary:</strong> "1857: The First War of Independence" (Prasar Bharati Archives).</li>
-                            <li><strong class="text-gray-900">Virtual Tour:</strong> Explore images of the British Residency in Lucknow (The siege site).</li>
-                        </ul>
-                    </div>
-
-                    <!-- Debate & Discuss -->
-                    <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-                        <div class="flex items-center mb-4">
-                            <div class="bg-orange-100 p-2 rounded-full mr-3 text-2xl">🗣️</div>
-                            <h3 class="text-lg font-bold text-gray-900">Debate Topic</h3>
+                        <div>
+                            <h5 class="text-lg font-semibold text-gray-700 mb-2">Blackboard Work</h5>
+                            <p class="text-gray-700"><strong>HOW DO WE KNOW?</strong></p>
+                            <ul class="list-disc list-outside ml-5 text-gray-700 space-y-1">
+                                <li>Administrative Records</li>
+                                <li>Surveys</li>
+                                <li><i>Teaching Aid: Flash cards showing surveys being conducted</i></li>
+                            </ul>
                         </div>
-                        <p class="text-sm text-gray-700 italic mb-3">"Was the Revolt of 1857 a 'Sepoy Mutiny' or the 'First War of Independence'?"</p>
-                        <p class="text-xs text-gray-500">Divide the class into two groups. One group argues for the British perspective (Mutiny), the other for the Indian perspective (War of Independence).</p>
-                    </div>
-
-                    <!-- Creative Project -->
-                    <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-                        <div class="flex items-center mb-4">
-                            <div class="bg-orange-100 p-2 rounded-full mr-3 text-2xl">🎨</div>
-                            <h3 class="text-lg font-bold text-gray-900">Creative Project</h3>
-                        </div>
-                        <ul class="space-y-3 text-sm text-gray-700">
-                            <li><strong class="text-gray-900">Newspaper Report:</strong> Write a report dated May 11, 1857, describing the scene in Delhi as the sepoys arrived from Meerut.</li>
-                            <li><strong class="text-gray-900">Character Sketch:</strong> Draw and describe a sepoy's uniform and equipment from the 1850s.</li>
-                        </ul>
                     </div>
                 </div>
-            </section>
-        </main>
-    </div>
+            </div>
+        </section>
+
+        <!-- Section 4: Assessment -->
+        <section id="assessment" class="mb-16 scroll-mt-24">
+            <h2 class="text-3xl font-bold text-gray-900 border-b-2 border-indigo-200 pb-2 mb-6">
+                Assessment & Review
+            </h2>
+            <p class="text-lg text-gray-700 mb-8">
+                This final section outlines the assessment strategy, including checking prior knowledge, reviewing the lesson's key concepts (recapitulation), and assigning follow-up work.
+            </p>
+            <div class="space-y-8">
+                <div class="content-card">
+                    <h3 class="text-xl font-semibold text-indigo-600 mb-4">Warm-up (Previous Knowledge Testing)</h3>
+                    <p class="text-gray-700 mb-4">Pupil Teacher will show a video and ask questions through that video.</p>
+                    <ul class="space-y-3">
+                        <li>
+                            <p class="font-semibold text-gray-800">Q. How long was the mughal period?</p>
+                            <p class="text-gray-700 pl-4">→ Expected Response: 350 years</p>
+                        </li>
+                        <li>
+                            <p class="font-semibold text-gray-800">Q. How long did the Vedic Age last?</p>
+                            <p class="text-gray-700 pl-4">→ Expected Response: 1000 years</p>
+                        </li>
+                        <li>
+                            <p class="font-semibold text-gray-800">Q. when did colonisation Begin?</p>
+                            <p class="text-gray-700 pl-4">→ Expected Response: 1757</p>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="content-card">
+                    <h3 class="text-xl font-semibold text-indigo-600 mb-4">Review (Recapitulation)</h3>
+                    <ul class="space-y-3">
+                        <li>
+                            <p class="font-semibold text-gray-800">Q. what do you mean by periodisation?</p>
+                            <p class="text-gray-700 pl-4">→ Ans: The process of dividing history into parts to make it easier to study.</p>
+                        </li>
+                        <li>
+                            <p class="font-semibold text-gray-800">Q. How did James Mill periodise Indian history?</p>
+                            <p class="text-gray-700 pl-4">→ Ans: Hindu Era → Muslim Era → British Era</p>
+                        </li>
+                        <li>
+                            <p class="font-semibold text-gray-800">Q. what do you mean by colonial?</p>
+                            <p class="text-gray-700 pl-4">→ Ans: Subjugation of one country by another.</p>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="content-card">
+                    <h3 class="text-xl font-semibold text-indigo-600 mb-4">Homework</h3>
+                    <p class="text-gray-700">Write your personal views on James Mill's periodisation of Indian history.</p>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-gray-100 border-t border-gray-200 mt-16">
+        <div class="container mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 py-6 text-center text-gray-500">
+            <p>&copy; 2025 Interactive Lesson Plan Viewer. Generated from source document.</p>
+        </div>
+    </footer>
 
     <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            const tabs = document.querySelectorAll('.tab-btn');
-            const contents = document.querySelectorAll('.tab-content');
+        document.addEventListener('DOMContentLoaded', () => {
+            
+            // Logic for Objective Buttons
+            const objectiveBtns = document.querySelectorAll('.objective-btn');
+            const objectiveContents = document.querySelectorAll('.objective-content');
 
-            tabs.forEach(tab => {
-                tab.addEventListener('click', () => {
-                    const target = tab.getAttribute('data-tab');
+            objectiveBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const targetId = btn.getAttribute('data-target');
+
+                    // Update button active state
+                    objectiveBtns.forEach(b => b.classList.remove('active', 'bg-indigo-600', 'text-white'));
+                    btn.classList.add('active', 'bg-indigo-600', 'text-white');
                     
-                    tabs.forEach(t => t.classList.remove('active'));
-                    tab.classList.add('active');
-                    
-                    contents.forEach(c => {
-                        c.classList.remove('active');
-                        if (c.id === target) {
-                            c.classList.add('active');
+                    // Show/hide content
+                    objectiveContents.forEach(content => {
+                        if (content.id === targetId) {
+                            content.style.display = 'block';
+                        } else {
+                            content.style.display = 'none';
                         }
                     });
-
-                    if (target === 'flow') {
-                        initChart();
-                    }
                 });
             });
 
-            const accordions = document.querySelectorAll('.accordion-item');
-            accordions.forEach(item => {
-                const header = item.querySelector('.accordion-header');
-                const content = item.querySelector('.accordion-content');
-                const icon = item.querySelector('.accordion-icon');
+            // Set initial active state for objectives
+            document.querySelector('.objective-btn[data-target="obj-remembering"]').click();
 
-                header.addEventListener('click', () => {
-                    const isOpen = !content.classList.contains('hidden');
-                    
-                    accordions.forEach(i => {
-                        i.querySelector('.accordion-content').classList.add('hidden');
-                        i.querySelector('.accordion-icon').textContent = '+';
-                    });
-                    
-                    if (!isOpen) {
-                        content.classList.remove('hidden');
-                        icon.textContent = '-';
+            // Logic for Nav Scroll-Spy
+            const sections = document.querySelectorAll('section');
+            const navLinks = document.querySelectorAll('.nav-link');
+            const headerOffset = document.querySelector('header').offsetHeight + 40;
+
+            const onScroll = () => {
+                let currentSection = '';
+
+                sections.forEach(section => {
+                    const sectionTop = section.offsetTop - headerOffset;
+                    if (window.scrollY >= sectionTop) {
+                        currentSection = section.getAttribute('id');
+                    }
+                });
+
+                navLinks.forEach(link => {
+                    link.classList.remove('active');
+                    if (link.getAttribute('href') === `#${currentSection}`) {
+                        link.classList.add('active');
+                    }
+                });
+            };
+
+            window.addEventListener('scroll', onScroll);
+            onScroll(); // Run on page load
+
+            // Logic for smooth scroll on nav link click
+            navLinks.forEach(link => {
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const targetId = link.getAttribute('href');
+                    const targetElement = document.querySelector(targetId);
+                    if (targetElement) {
+                        const targetPosition = targetElement.offsetTop - (headerOffset - 40);
+                        window.scrollTo({
+                            top: targetPosition,
+                            behavior: 'smooth'
+                        });
                     }
                 });
             });
-
-            let chartInstance = null;
-            function initChart() {
-                if (chartInstance) {
-                    return;
-                }
-                const ctx = document.getElementById('leadersChart').getContext('2d');
-                const leadersData = {
-                    labels: ['Kanpur', 'Jhansi', 'Lucknow', 'Bihar'],
-                    datasets: [{
-                        data: [1, 1, 1, 1],
-                        backgroundColor: [
-                            '#f97316', 
-                            '#ea580c', 
-                            '#d97706',
-                            '#c2410c'  
-                        ],
-                        hoverBackgroundColor: [
-                            '#fb923c',
-                            '#f97316',
-                            '#f59e0b',
-                            '#ea580c'
-                        ],
-                        borderColor: '#f9fafb',
-                        borderWidth: 2
-                    }]
-                };
-                
-                const leadersTooltips = {
-                    'Kanpur': 'Nana Saheb',
-                    'Jhansi': 'Rani Lakshmibai',
-                    'Lucknow': 'Begum Hazrat Mahal',
-                    'Bihar': 'Kunwar Singh'
-                };
-
-                chartInstance = new Chart(ctx, {
-                    type: 'doughnut',
-                    data: leadersData,
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            legend: {
-                                position: 'bottom',
-                                labels: {
-                                    padding: 15
-                                }
-                            },
-                            tooltip: {
-                                callbacks: {
-                                    label: function(context) {
-                                        const label = context.label || '';
-                                        const leader = leadersTooltips[label] || '';
-                                        return `${label}: ${leader}`;
-                                    }
-                                }
-                            }
-                        }
-                    }
-                });
-            }
         });
     </script>
-
 </body>
 </html>
