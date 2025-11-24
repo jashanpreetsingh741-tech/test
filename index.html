@@ -1,413 +1,390 @@
 <!DOCTYPE html>
-<html lang="en" class="scroll-smooth">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Interactive Lesson Plan: How, When and Where</title>
+    <title>Flashcards: Understanding Media (Class 7)</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
     <!-- 
-    Chosen Palette: Calm Indigo & Gray
-    Application Structure Plan: The SPA uses a single-page, scrolling structure with a sticky navigation header ("Overview," "Objectives," "Lesson Flow," "Assessment"). This replaces the linear PDF format with a task-oriented dashboard. Users can immediately jump to the section they need (e.g., an observer can check "Objectives," a teacher can review the "Lesson Flow"). The key interactions are: 1) Sticky nav for quick jumps. 2) An interactive set of buttons for "Learning Objectives," which reveals content for one Bloom's Taxonomy category at a time, preventing information overload. 3) A transformation of the PDF's 4-column "Presentation" table into a vertical, step-by-step "Main Activity Sequence," which is far more readable and usable for a teacher following the plan.
+    Chosen Palette: Soft Teal & Slate
+    Application Structure Plan: 
+    - A central interactive "Flashcard" area is the focal point.
+    - Users can flip the card to reveal answers derived directly from the Lesson Plan specific objectives and content.
+    - Navigation controls (Next/Prev) allow linear study.
+    - A "Progress Bar" shows how far along the deck the user is.
+    - A "Study List" view allows users to see all terms at a glance if they prefer not to use the card mode.
     Visualization & Content Choices:
-    - Report Info: Lesson Metadata (Class, Subject, etc.) -> Goal: Inform -> Viz/Method: HTML/Tailwind Grid -> Interaction: None -> Justification: Clear "at-a-glance" overview.
-    - Report Info: Specific Objectives (Bloom's list) -> Goal: Organize & Explore -> Viz/Method: JS-powered buttons showing/hiding content divs -> Interaction: Click-to-reveal -> Justification: Breaks down a long, dense list into consumable, focused chunks.
-    - Report Info: 4-Column Presentation Table -> Goal: Change/Process -> Viz/Method: Structured HTML cards (Step 1, Step 2...) with clear subheadings (Teacher Activity, Student Activity, Blackboard) -> Interaction: None (scrolling) -> Justification: Transforms a wide, unreadable table into a vertical, sequential flow that mimics actual lesson delivery.
-    - Report Info: PK Testing, Recapitulation, Homework -> Goal: Inform/Assess -> Viz/Method: Simple HTML lists/Q&A format -> Interaction: None -> Justification: Most direct and clear presentation.
-    - Note: No quantitative data exists in the report, so no charts (Chart.js) were used.
-    CONFIRMATION: NO SVG graphics used. NO Mermaid JS used.
+    - Content: Extracted directly from "Lesson_Plan_Media_Class_7.md" (Definitions, Mass Media, Censorship, Money flow).
+    - Interaction: CSS 3D Transforms for the card flip effect to simulate real physical flashcards.
+    - Justification: Flashcards are the most effective tool for the "Remembering" and "Understanding" objectives listed in the plan.
+    CONFIRMATION: NO SVG graphics used (using FontAwesome/Unicode). NO Mermaid JS used.
     -->
     <style>
         body {
-            font-family: 'Inter', sans-serif;
+            font-family: 'Poppins', sans-serif;
+            background-color: #f0fdfa; /* teal-50 */
         }
-        .sticky-nav {
-            position: sticky;
-            top: 0;
-            z-index: 50;
+        
+        /* 3D Flip Card Styles */
+        .scene {
+            perspective: 1000px;
+            height: 400px;
+            width: 100%;
+            max-width: 600px;
+            margin: 0 auto;
         }
-        .nav-link {
-            transition: color 0.2s, border-bottom-color 0.2s;
-            border-bottom: 2px solid transparent;
+
+        .card {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            transition: transform 0.6s;
+            transform-style: preserve-3d;
+            cursor: pointer;
         }
-        .nav-link.active,
-        .nav-link:hover {
-            color: #4f46e5; /* indigo-600 */
-            border-bottom-color: #4f46e5; /* indigo-600 */
+
+        .card.is-flipped {
+            transform: rotateY(180deg);
         }
-        .objective-btn {
-            transition: all 0.2s;
+
+        .card-face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            border-radius: 1.5rem;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+            text-align: center;
         }
-        .objective-btn.active {
-            background-color: #4f46e5; /* indigo-600 */
+
+        .card-face-front {
+            background: white;
+            color: #0f172a; /* slate-900 */
+            border: 2px solid #ccfbf1; /* teal-100 */
+        }
+
+        .card-face-back {
+            background: #0d9488; /* teal-600 */
             color: white;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            transform: rotateY(180deg);
         }
-        .hidden-content {
-            display: none;
+
+        .category-pill {
+            position: absolute;
+            top: 1.5rem;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 0.25rem 1rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
         }
-        .content-card {
-            background-color: #f9fafb; /* gray-50 */
-            border: 1px solid #e5e7eb; /* gray-200 */
-            border-radius: 0.75rem;
-            padding: 1.5rem;
-            transition: all 0.3s ease-in-out;
+
+        /* Scrollbar for study list */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
         }
-        .content-card:hover {
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-            transform: translateY(-2px);
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 3px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
         }
     </style>
 </head>
-<body class="bg-white text-gray-800 antialiased">
+<body class="text-slate-800 min-h-screen flex flex-col">
 
-    <!-- Sticky Navigation Header -->
-    <header class="sticky-nav bg-white/95 backdrop-blur-sm shadow-sm border-b border-gray-200">
-        <nav class="container mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col sm:flex-row justify-between items-center">
-            <h1 class="text-xl font-bold text-indigo-600">Lesson: How, When and Where</h1>
-            <div class="flex flex-wrap justify-center gap-4 sm:gap-6 mt-3 sm:mt-0">
-                <a href="#overview" class="nav-link text-sm sm:text-base font-medium text-gray-600 px-1 py-1">Overview</a>
-                <a href="#objectives" class="nav-link text-sm sm:text-base font-medium text-gray-600 px-1 py-1">Objectives</a>
-                <a href="#flow" class="nav-link text-sm sm:text-base font-medium text-gray-600 px-1 py-1">Lesson Flow</a>
-                <a href="#assessment" class="nav-link text-sm sm:text-base font-medium text-gray-600 px-1 py-1">Assessment</a>
+    <!-- Header -->
+    <header class="bg-white border-b border-teal-100 shadow-sm sticky top-0 z-50">
+        <div class="container mx-auto px-4 py-4 flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-teal-600 rounded-full flex items-center justify-center text-white font-bold text-lg">
+                    <i class="fa-solid fa-tv"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-xl text-slate-800">Understanding Media</h1>
+                    <p class="text-xs text-slate-500 font-medium">Class 7 • Chapter 6</p>
+                </div>
             </div>
-        </nav>
+            <button onclick="toggleView()" id="viewToggleBtn" class="text-sm font-medium text-teal-700 hover:text-teal-900 bg-teal-50 px-4 py-2 rounded-lg transition">
+                <i class="fa-solid fa-list-ul mr-2"></i> View All List
+            </button>
+        </div>
     </header>
 
     <!-- Main Content -->
-    <main class="container mx-auto p-4 sm:p-6 lg:p-10 max-w-5xl">
+    <main class="flex-grow container mx-auto px-4 py-8 flex flex-col items-center justify-center w-full">
 
-        <!-- Section 1: Overview -->
-        <section id="overview" class="mb-16 scroll-mt-24">
-            <h2 class="text-3xl font-bold text-gray-900 border-b-2 border-indigo-200 pb-2 mb-6">
-                Lesson Overview
-            </h2>
-            <p class="text-lg text-gray-700 mb-8">
-                This section provides the high-level details for this lesson plan, including the target class, topic, and the primary teaching goals. It's the "at-a-glance" summary of the entire plan.
-            </p>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                <div class="content-card">
-                    <h3 class="text-xl font-semibold text-indigo-600 mb-3">Lesson Details</h3>
-                    <ul class="space-y-2 text-gray-700">
-                        <li><strong>Class:</strong> VIII</li>
-                        <li><strong>Subject:</strong> Social Studies (History)</li>
-                        <li><strong>Topic:</strong> How, when And where (Chapter 1)</li>
-                        <li><strong>Sub-Topic:</strong> Periodisation and colonial Rule</li>
-                        <li><strong>Duration:</strong> 15 minutes</li>
-                    </ul>
-                </div>
-                <div class="content-card">
-                    <h3 class="text-xl font-semibold text-indigo-600 mb-3">General Objectives</h3>
-                    <ul class="space-y-2 text-gray-700 list-disc list-outside ml-5">
-                        <li>To develop thinking and reasoning power of the Students.</li>
-                        <li>To develop the interest of the students in the subject.</li>
-                        <li>To enable the students to understand the concept of periodisation.</li>
-                    </ul>
-                </div>
-            </div>
-        </section>
-
-        <!-- Section 2: Learning Objectives -->
-        <section id="objectives" class="mb-16 scroll-mt-24">
-            <h2 class="text-3xl font-bold text-gray-900 border-b-2 border-indigo-200 pb-2 mb-6">
-                Learning Objectives
-            </h2>
-            <p class="text-lg text-gray-700 mb-8">
-                This section breaks down the specific learning outcomes for students, categorized by Bloom's Taxonomy. Click each button to see the specific objectives for that cognitive level.
-            </p>
+        <!-- Flashcard View -->
+        <div id="flashcardView" class="w-full max-w-2xl">
             
-            <div class="flex flex-wrap gap-2 md:gap-3 mb-6">
-                <button class="objective-btn active text-sm sm:text-base bg-white border border-gray-300 text-gray-700 font-medium py-2 px-4 rounded-full shadow-sm hover:bg-gray-100" data-target="obj-remembering">Remembering</button>
-                <button class="objective-btn text-sm sm:text-base bg-white border border-gray-300 text-gray-700 font-medium py-2 px-4 rounded-full shadow-sm hover:bg-gray-100" data-target="obj-understanding">Understanding</button>
-                <button class="objective-btn text-sm sm:text-base bg-white border border-gray-300 text-gray-700 font-medium py-2 px-4 rounded-full shadow-sm hover:bg-gray-100" data-target="obj-applying">Applying</button>
-                <button class="objective-btn text-sm sm:text-base bg-white border border-gray-300 text-gray-700 font-medium py-2 px-4 rounded-full shadow-sm hover:bg-gray-100" data-target="obj-analysis">Analysis</button>
-                <button class="objective-btn text-sm sm:text-base bg-white border border-gray-300 text-gray-700 font-medium py-2 px-4 rounded-full shadow-sm hover:bg-gray-100" data-target="obj-evaluate">Evaluate</button>
-                <button class="objective-btn text-sm sm:text-base bg-white border border-gray-300 text-gray-700 font-medium py-2 px-4 rounded-full shadow-sm hover:bg-gray-100" data-target="obj-create">Create</button>
+            <!-- Progress -->
+            <div class="mb-6 flex justify-between items-end text-sm text-slate-500 font-medium px-2">
+                <span id="cardCounter">Card 1 of 10</span>
+                <span id="progressPercent">0% Completed</span>
+            </div>
+            <div class="w-full bg-slate-200 rounded-full h-2 mb-8">
+                <div id="progressBar" class="bg-teal-500 h-2 rounded-full transition-all duration-300" style="width: 10%"></div>
             </div>
 
-            <div class="content-card min-h-[150px]">
-                <div id="obj-remembering" class="objective-content space-y-2">
-                    <h4 class="text-lg font-semibold text-gray-800">Remembering</h4>
-                    <ul class="list-disc list-outside ml-5 text-gray-700">
-                        <li>Students will be able to remember the definition of periodisation.</li>
-                        <li>Students will be able to recall sources of information.</li>
-                    </ul>
-                </div>
-                <div id="obj-understanding" class="objective-content hidden-content space-y-2">
-                    <h4 class="text-lg font-semibold text-gray-800">Understanding</h4>
-                    <ul class="list-disc list-outside ml-5 text-gray-700">
-                        <li>Students will be able to summarise the concept of colonisation.</li>
-                        <li>Students will be able to explain the process of periodisation.</li>
-                    </ul>
-                </div>
-                <div id="obj-applying" class="objective-content hidden-content space-y-2">
-                    <h4 class="text-lg font-semibold text-gray-800">Applying</h4>
-                    <ul class="list-disc list-outside ml-5 text-gray-700">
-                        <li>Students will be able to relate the events that are happening in the present day society to that during the colonial period.</li>
-                        <li>Students will be able to sketch out the situation Indians were in, during the colonial period.</li>
-                    </ul>
-                </div>
-                <div id="obj-analysis" class="objective-content hidden-content space-y-2">
-                    <h4 class="text-lg font-semibold text-gray-800">Analysis</h4>
-                    <ul class="list-disc list-outside ml-5 text-gray-700">
-                        <li>Students will be able to analyse the James Mill's periodisation.</li>
-                        <li>Students will be able to break down the process of periodisation.</li>
-                    </ul>
-                </div>
-                <div id="obj-evaluate" class="objective-content hidden-content space-y-2">
-                    <h4 class="text-lg font-semibold text-gray-800">Evaluate</h4>
-                    <ul class="list-disc list-outside ml-5 text-gray-700">
-                        <li>Students will be able to evaluate the effects of colonial rule in India.</li>
-                        <li>Students will be able to understand the reasoning method of the British people.</li>
-                    </ul>
-                </div>
-                <div id="obj-create" class="objective-content hidden-content space-y-2">
-                    <h4 class="text-lg font-semibold text-gray-800">Create</h4>
-                    <ul class="list-disc list-outside ml-5 text-gray-700">
-                        <li>Students will be able to comprehend to the concept of periodisation.</li>
-                        <li>Students will be able to create a short paragraph on the effect of colonial rule on Modern India.</li>
-                    </ul>
-                </div>
-            </div>
-        </section>
-
-        <!-- Section 3: Lesson Flow -->
-        <section id="flow" class="mb-16 scroll-mt-24">
-            <h2 class="text-3xl font-bold text-gray-900 border-b-2 border-indigo-200 pb-2 mb-6">
-                Lesson Flow & Activities
-            </h2>
-            <p class="text-lg text-gray-700 mb-8">
-                This section details the "how" of the lesson. It includes the materials needed and a step-by-step sequence of the main teaching activity, transforming the original table into a clear, actionable guide.
-            </p>
-
-            <div class="content-card mb-8">
-                <h3 class="text-xl font-semibold text-indigo-600 mb-4">Materials & Methods</h3>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                        <h4 class="text-lg font-semibold text-gray-800 mb-2">General Aids</h4>
-                        <ul class="list-disc list-outside ml-5 text-gray-700">
-                            <li>Chalk / Marker</li>
-                            <li>Black Board / White Board</li>
-                            <li>Duster</li>
-                        </ul>
+            <!-- The Card -->
+            <div class="scene">
+                <div class="card" id="flashcard" onclick="flipCard()">
+                    <div class="card-face card-face-front">
+                        <span class="category-pill bg-teal-50 text-teal-700 border border-teal-100" id="cardCategory">Definition</span>
+                        <div class="flex-grow flex flex-col justify-center items-center">
+                            <h2 class="text-2xl md:text-3xl font-bold leading-tight" id="cardFront">Media</h2>
+                            <p class="mt-4 text-slate-400 text-sm font-medium"><i class="fa-solid fa-arrow-rotate-right mr-2"></i>Click to flip</p>
+                        </div>
                     </div>
-                    <div>
-                        <h4 class="text-lg font-semibold text-gray-800 mb-2">Specific Aids</h4>
-                        <ul class="list-disc list-outside ml-5 text-gray-700">
-                            <li>A video clip showing different periods in India.</li>
-                            <li>Flash Cards</li>
-                        </ul>
-                        <h4 class="text-lg font-semibold text-gray-800 mt-4 mb-2">Teaching Methods</h4>
-                        <p class="text-gray-700">Discussion</p>
+                    <div class="card-face card-face-back">
+                        <span class="category-pill bg-teal-700 text-teal-100 border border-teal-500" id="cardCategoryBack">Definition</span>
+                        <div class="flex-grow flex flex-col justify-center items-center">
+                            <p class="text-xl md:text-2xl font-medium leading-relaxed px-4" id="cardBack">The plural form of the word 'medium'. It describes the various ways through which we communicate in society.</p>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <h3 class="text-2xl font-semibold text-gray-900 mb-6">Main Activity Sequence</h3>
-            <div class="space-y-6">
-                <!-- Step 1 -->
-                <div class="content-card">
-                    <span class="text-sm font-semibold text-indigo-500 bg-indigo-100 py-1 px-3 rounded-full">Step 1</span>
-                    <h4 class="text-xl font-semibold text-gray-800 mt-3 mb-4">Content: How Do We Periodise</h4>
-                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                        <div>
-                            <h5 class="text-lg font-semibold text-gray-700 mb-2">Teacher Activity</h5>
-                            <p class="text-gray-700">The pupil Teacher will explain about the importance of Periodisation. After that the pupil Teacher will explain about James Mill's Periodisation.</p>
-                        </div>
-                        <div>
-                            <h5 class="text-lg font-semibold text-gray-700 mb-2">Student Activity</h5>
-                            <p class="text-gray-700">The students will listen carefully and make notes when required.</p>
-                        </div>
-                        <div>
-                            <h5 class="text-lg font-semibold text-gray-700 mb-2">Blackboard Work</h5>
-                            <ul class="list-disc list-outside ml-5 text-gray-700 space-y-1">
-                                <li><strong>James Mill's Periodisation:</strong><br>→ Hindu Era<br>→ Muslim Era<br>→ British Era</li>
-                                <li><strong>Periodisation (Followed):</strong><br>→ Ancient India<br>→ Medieval India<br>→ Modern India</li>
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-                <!-- Step 2 -->
-                <div class="content-card">
-                    <span class="text-sm font-semibold text-indigo-500 bg-indigo-100 py-1 px-3 rounded-full">Step 2</span>
-                    <h4 class="text-xl font-semibold text-gray-800 mt-3 mb-4">Content: What is Colonial</h4>
-                     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                        <div>
-                            <h5 class="text-lg font-semibold text-gray-700 mb-2">Teacher Activity</h5>
-                            <p class="text-gray-700">Pupil Teacher will explain about what colonial is and write the important things on the board.</p>
-                        </div>
-                        <div>
-                            <h5 class="text-lg font-semibold text-gray-700 mb-2">Student Activity</h5>
-                            <p class="text-gray-700">Students will listen carefully and make notes when required.</p>
-                        </div>
-                        <div>
-                            <h5 class="text-lg font-semibold text-gray-700 mb-2">Blackboard Work</h5>
-                            <p class="text-gray-700"><strong>COLONIAL:</strong><br>When one country is subjugated by another country.</p>
-                        </div>
-                    </div>
-                </div>
-                <!-- Step 3 -->
-                <div class="content-card">
-                    <span class="text-sm font-semibold text-indigo-500 bg-indigo-100 py-1 px-3 rounded-full">Step 3</span>
-                    <h4 class="text-xl font-semibold text-gray-800 mt-3 mb-4">Content: How Do We Know</h4>
-                     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                        <div>
-                            <h5 class="text-lg font-semibold text-gray-700 mb-2">Teacher Activity</h5>
-                            <p class="text-gray-700">Pupil Teacher will explain the sources and show some pictures.</p>
-                        </div>
-                        <div>
-                            <h5 class="text-lg font-semibold text-gray-700 mb-2">Student Activity</h5>
-                            <p class="text-gray-700">Students will make notes.</p>
-                        </div>
-                        <div>
-                            <h5 class="text-lg font-semibold text-gray-700 mb-2">Blackboard Work</h5>
-                            <p class="text-gray-700"><strong>HOW DO WE KNOW?</strong></p>
-                            <ul class="list-disc list-outside ml-5 text-gray-700 space-y-1">
-                                <li>Administrative Records</li>
-                                <li>Surveys</li>
-                                <li><i>Teaching Aid: Flash cards showing surveys being conducted</i></li>
-                            </ul>
-                        </div>
-                    </div>
-                </div>
+            <!-- Controls -->
+            <div class="flex justify-center gap-6 mt-10">
+                <button onclick="prevCard()" class="w-14 h-14 rounded-full bg-white border border-slate-200 text-slate-600 shadow-sm hover:bg-slate-50 hover:text-teal-600 transition flex items-center justify-center text-xl disabled:opacity-50 disabled:cursor-not-allowed" id="prevBtn">
+                    <i class="fa-solid fa-chevron-left"></i>
+                </button>
+                
+                <button onclick="flipCard()" class="px-8 py-3 rounded-full bg-teal-600 text-white font-semibold shadow-md hover:bg-teal-700 transition transform hover:-translate-y-1">
+                    Show Answer
+                </button>
+
+                <button onclick="nextCard()" class="w-14 h-14 rounded-full bg-white border border-slate-200 text-slate-600 shadow-sm hover:bg-slate-50 hover:text-teal-600 transition flex items-center justify-center text-xl disabled:opacity-50 disabled:cursor-not-allowed" id="nextBtn">
+                    <i class="fa-solid fa-chevron-right"></i>
+                </button>
             </div>
-        </section>
+            <p class="text-center mt-6 text-slate-400 text-sm">Use arrow keys or click buttons to navigate</p>
+        </div>
 
-        <!-- Section 4: Assessment -->
-        <section id="assessment" class="mb-16 scroll-mt-24">
-            <h2 class="text-3xl font-bold text-gray-900 border-b-2 border-indigo-200 pb-2 mb-6">
-                Assessment & Review
-            </h2>
-            <p class="text-lg text-gray-700 mb-8">
-                This final section outlines the assessment strategy, including checking prior knowledge, reviewing the lesson's key concepts (recapitulation), and assigning follow-up work.
-            </p>
-            <div class="space-y-8">
-                <div class="content-card">
-                    <h3 class="text-xl font-semibold text-indigo-600 mb-4">Warm-up (Previous Knowledge Testing)</h3>
-                    <p class="text-gray-700 mb-4">Pupil Teacher will show a video and ask questions through that video.</p>
-                    <ul class="space-y-3">
-                        <li>
-                            <p class="font-semibold text-gray-800">Q. How long was the mughal period?</p>
-                            <p class="text-gray-700 pl-4">→ Expected Response: 350 years</p>
-                        </li>
-                        <li>
-                            <p class="font-semibold text-gray-800">Q. How long did the Vedic Age last?</p>
-                            <p class="text-gray-700 pl-4">→ Expected Response: 1000 years</p>
-                        </li>
-                        <li>
-                            <p class="font-semibold text-gray-800">Q. when did colonisation Begin?</p>
-                            <p class="text-gray-700 pl-4">→ Expected Response: 1757</p>
-                        </li>
-                    </ul>
-                </div>
-
-                <div class="content-card">
-                    <h3 class="text-xl font-semibold text-indigo-600 mb-4">Review (Recapitulation)</h3>
-                    <ul class="space-y-3">
-                        <li>
-                            <p class="font-semibold text-gray-800">Q. what do you mean by periodisation?</p>
-                            <p class="text-gray-700 pl-4">→ Ans: The process of dividing history into parts to make it easier to study.</p>
-                        </li>
-                        <li>
-                            <p class="font-semibold text-gray-800">Q. How did James Mill periodise Indian history?</p>
-                            <p class="text-gray-700 pl-4">→ Ans: Hindu Era → Muslim Era → British Era</p>
-                        </li>
-                        <li>
-                            <p class="font-semibold text-gray-800">Q. what do you mean by colonial?</p>
-                            <p class="text-gray-700 pl-4">→ Ans: Subjugation of one country by another.</p>
-                        </li>
-                    </ul>
-                </div>
-
-                <div class="content-card">
-                    <h3 class="text-xl font-semibold text-indigo-600 mb-4">Homework</h3>
-                    <p class="text-gray-700">Write your personal views on James Mill's periodisation of Indian history.</p>
-                </div>
+        <!-- List View (Hidden by default) -->
+        <div id="listView" class="w-full max-w-3xl hidden">
+            <h2 class="text-2xl font-bold mb-6 text-slate-800">Study Guide</h2>
+            <div class="grid gap-4" id="listContainer">
+                <!-- Content populated by JS -->
             </div>
-        </section>
+        </div>
 
     </main>
 
     <!-- Footer -->
-    <footer class="bg-gray-100 border-t border-gray-200 mt-16">
-        <div class="container mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 py-6 text-center text-gray-500">
-            <p>&copy; 2025 Interactive Lesson Plan Viewer. Generated from source document.</p>
+    <footer class="bg-white border-t border-slate-200 mt-auto py-6">
+        <div class="container mx-auto text-center">
+            <p class="text-slate-500 text-sm">Generated for Class VII Social Studies</p>
         </div>
     </footer>
 
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
+        // Data derived from the Lesson Plan
+        const flashcardsData = [
+            {
+                id: 1,
+                category: "Definition",
+                front: "Media",
+                back: "The plural form of the word 'medium'. It refers to all means of communication in society."
+            },
+            {
+                id: 2,
+                category: "Concept",
+                front: "Mass Media",
+                back: "Forms of media that reach millions of people (the masses) across the country. Examples: TV, Radio, Newspapers."
+            },
+            {
+                id: 3,
+                category: "Classification",
+                front: "Print Media",
+                back: "Media that uses paper to communicate news. Examples: Newspapers, Magazines."
+            },
+            {
+                id: 4,
+                category: "Classification",
+                front: "Electronic Media",
+                back: "Media that uses electronics or screens. Examples: Television, Internet, Radio."
+            },
+            {
+                id: 5,
+                category: "Economics",
+                front: "Why do media companies show Advertisements?",
+                back: "To earn money. This money is needed to pay for expensive technology like lights, cameras, sound recorders, and satellites."
+            },
+            {
+                id: 6,
+                category: "Democracy",
+                front: "Balanced Report",
+                back: "A report that discusses all points of view of a particular story and leaves it to the readers to make up their minds."
+            },
+            {
+                id: 7,
+                category: "Democracy",
+                front: "Censorship",
+                back: "The power of the government to disallow media from publishing or showing certain stories, movie scenes, or lyrics."
+            },
+            {
+                id: 8,
+                category: "Technology",
+                front: "Impact of Technology on Media",
+                back: "1. Helps reach more people.\n2. Improves the quality of sound and images.\n3. Changes the way we think about our lives."
+            },
+            {
+                id: 9,
+                category: "Application",
+                front: "Target Audience",
+                back: "The specific group of people an advertisement is trying to reach (e.g., ads for toys target children)."
+            },
+            {
+                id: 10,
+                category: "Economics",
+                front: "Cost of Media",
+                back: "Running a TV studio is expensive due to the cost of lights, cameras, satellites, and paying many employees."
+            }
+        ];
+
+        // State
+        let currentIndex = 0;
+        let isFlipped = false;
+        let isListView = false;
+
+        // DOM Elements
+        const cardElement = document.getElementById('flashcard');
+        const cardFront = document.getElementById('cardFront');
+        const cardBack = document.getElementById('cardBack');
+        const cardCategory = document.getElementById('cardCategory');
+        const cardCategoryBack = document.getElementById('cardCategoryBack');
+        const cardCounter = document.getElementById('cardCounter');
+        const progressBar = document.getElementById('progressBar');
+        const progressPercent = document.getElementById('progressPercent');
+        const prevBtn = document.getElementById('prevBtn');
+        const nextBtn = document.getElementById('nextBtn');
+        const viewToggleBtn = document.getElementById('viewToggleBtn');
+        const flashcardView = document.getElementById('flashcardView');
+        const listView = document.getElementById('listView');
+        const listContainer = document.getElementById('listContainer');
+
+        // Initialization
+        function init() {
+            renderCard();
+            renderList();
+            updateControls();
             
-            // Logic for Objective Buttons
-            const objectiveBtns = document.querySelectorAll('.objective-btn');
-            const objectiveContents = document.querySelectorAll('.objective-content');
-
-            objectiveBtns.forEach(btn => {
-                btn.addEventListener('click', () => {
-                    const targetId = btn.getAttribute('data-target');
-
-                    // Update button active state
-                    objectiveBtns.forEach(b => b.classList.remove('active', 'bg-indigo-600', 'text-white'));
-                    btn.classList.add('active', 'bg-indigo-600', 'text-white');
-                    
-                    // Show/hide content
-                    objectiveContents.forEach(content => {
-                        if (content.id === targetId) {
-                            content.style.display = 'block';
-                        } else {
-                            content.style.display = 'none';
-                        }
-                    });
-                });
+            // Keyboard nav
+            document.addEventListener('keydown', (e) => {
+                if (isListView) return;
+                if (e.key === 'ArrowRight') nextCard();
+                if (e.key === 'ArrowLeft') prevCard();
+                if (e.key === ' ' || e.key === 'Enter') flipCard();
             });
+        }
 
-            // Set initial active state for objectives
-            document.querySelector('.objective-btn[data-target="obj-remembering"]').click();
+        // Render Current Card
+        function renderCard() {
+            const data = flashcardsData[currentIndex];
+            
+            // Reset Flip
+            if (isFlipped) {
+                cardElement.classList.remove('is-flipped');
+                isFlipped = false;
+                // Wait for transition before updating text (optional, but smoother)
+                setTimeout(() => updateCardContent(data), 300);
+            } else {
+                updateCardContent(data);
+            }
 
-            // Logic for Nav Scroll-Spy
-            const sections = document.querySelectorAll('section');
-            const navLinks = document.querySelectorAll('.nav-link');
-            const headerOffset = document.querySelector('header').offsetHeight + 40;
+            // Update UI Stats
+            const progress = ((currentIndex + 1) / flashcardsData.length) * 100;
+            progressBar.style.width = `${progress}%`;
+            cardCounter.innerText = `Card ${currentIndex + 1} of ${flashcardsData.length}`;
+            progressPercent.innerText = `${Math.round(progress)}% Completed`;
+        }
 
-            const onScroll = () => {
-                let currentSection = '';
+        function updateCardContent(data) {
+            cardFront.innerText = data.front;
+            cardBack.innerText = data.back;
+            cardCategory.innerText = data.category;
+            cardCategoryBack.innerText = data.category;
+            
+            // Adjust category color based on type (Visual polish)
+            let colorClass = "text-teal-700 bg-teal-50 border-teal-100";
+            if(data.category === "Economics") colorClass = "text-amber-700 bg-amber-50 border-amber-100";
+            if(data.category === "Democracy") colorClass = "text-indigo-700 bg-indigo-50 border-indigo-100";
+            
+            cardCategory.className = `category-pill border ${colorClass}`;
+            // Back category always teal to match back background
+        }
 
-                sections.forEach(section => {
-                    const sectionTop = section.offsetTop - headerOffset;
-                    if (window.scrollY >= sectionTop) {
-                        currentSection = section.getAttribute('id');
-                    }
-                });
+        // Actions
+        function flipCard() {
+            isFlipped = !isFlipped;
+            cardElement.classList.toggle('is-flipped');
+        }
 
-                navLinks.forEach(link => {
-                    link.classList.remove('active');
-                    if (link.getAttribute('href') === `#${currentSection}`) {
-                        link.classList.add('active');
-                    }
-                });
-            };
+        function nextCard() {
+            if (currentIndex < flashcardsData.length - 1) {
+                currentIndex++;
+                renderCard();
+                updateControls();
+            }
+        }
 
-            window.addEventListener('scroll', onScroll);
-            onScroll(); // Run on page load
+        function prevCard() {
+            if (currentIndex > 0) {
+                currentIndex--;
+                renderCard();
+                updateControls();
+            }
+        }
 
-            // Logic for smooth scroll on nav link click
-            navLinks.forEach(link => {
-                link.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    const targetId = link.getAttribute('href');
-                    const targetElement = document.querySelector(targetId);
-                    if (targetElement) {
-                        const targetPosition = targetElement.offsetTop - (headerOffset - 40);
-                        window.scrollTo({
-                            top: targetPosition,
-                            behavior: 'smooth'
-                        });
-                    }
-                });
-            });
-        });
+        function updateControls() {
+            prevBtn.disabled = currentIndex === 0;
+            nextBtn.disabled = currentIndex === flashcardsData.length - 1;
+        }
+
+        // Toggle Views
+        function toggleView() {
+            isListView = !isListView;
+            if (isListView) {
+                flashcardView.classList.add('hidden');
+                listView.classList.remove('hidden');
+                viewToggleBtn.innerHTML = '<i class="fa-solid fa-layer-group mr-2"></i> Study Cards';
+            } else {
+                flashcardView.classList.remove('hidden');
+                listView.classList.add('hidden');
+                viewToggleBtn.innerHTML = '<i class="fa-solid fa-list-ul mr-2"></i> View All List';
+            }
+        }
+
+        // Render List View
+        function renderList() {
+            listContainer.innerHTML = flashcardsData.map(card => `
+                <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition">
+                    <span class="inline-block px-2 py-1 bg-slate-100 text-slate-600 text-xs font-bold rounded mb-2 uppercase tracking-wide">${card.category}</span>
+                    <h3 class="text-lg font-bold text-slate-800 mb-2">${card.front}</h3>
+                    <p class="text-slate-600 border-l-4 border-teal-500 pl-4 bg-slate-50 py-2 rounded-r">${card.back.replace(/\n/g, '<br>')}</p>
+                </div>
+            `).join('');
+        }
+
+        // Run
+        init();
+
     </script>
 </body>
 </html>
